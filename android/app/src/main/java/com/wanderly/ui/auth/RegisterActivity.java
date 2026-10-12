@@ -102,8 +102,9 @@ public class RegisterActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(@NonNull Call<AuthResponse> call, @NonNull Throwable t) {
                         setLoading(false);
+                        android.util.Log.e("REGISTER", "Request failed", t);
                         Toast.makeText(RegisterActivity.this,
-                                "Cannot reach the server. Is the backend running?",
+                                "Error: " + t.getClass().getSimpleName() + " - " + t.getMessage(),
                                 Toast.LENGTH_LONG).show();
                     }
                 });

@@ -95,8 +95,9 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(@NonNull Call<AuthResponse> call, @NonNull Throwable t) {
                         setLoading(false);
+                        android.util.Log.e("LOGIN", "Request failed", t);
                         Toast.makeText(LoginActivity.this,
-                                "Cannot reach the server. Is the backend running?",
+                                "Error: " + t.getClass().getSimpleName() + " - " + t.getMessage(),
                                 Toast.LENGTH_LONG).show();
                     }
                 });
