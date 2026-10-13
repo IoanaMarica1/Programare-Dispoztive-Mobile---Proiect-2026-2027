@@ -1,10 +1,10 @@
-package com.wanderly.network;
+package com.wanderly.data.remote;
 
 import android.content.Context;
 
 import com.google.gson.Gson;
-import com.wanderly.data.TokenManager;
-import com.wanderly.network.dto.ErrorResponse;
+import com.wanderly.data.local.TokenManager;
+import com.wanderly.data.remote.dto.ErrorResponse;
 
 import java.util.concurrent.TimeUnit;
 

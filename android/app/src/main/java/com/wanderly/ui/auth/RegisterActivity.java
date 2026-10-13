@@ -15,11 +15,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.wanderly.R;
-import com.wanderly.data.TokenManager;
-import com.wanderly.network.ApiClient;
-import com.wanderly.network.dto.AuthResponse;
-import com.wanderly.network.dto.ErrorResponse;
-import com.wanderly.network.dto.RegisterRequest;
+import com.wanderly.data.local.TokenManager;
+import com.wanderly.data.remote.ApiClient;
+import com.wanderly.data.remote.dto.AuthResponse;
+import com.wanderly.data.remote.dto.ErrorResponse;
+import com.wanderly.data.remote.dto.RegisterRequest;
 import com.wanderly.ui.home.HomeActivity;
 
 import java.util.Map;

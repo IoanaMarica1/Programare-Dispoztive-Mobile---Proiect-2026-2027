@@ -1,3 +1,41 @@
 <resources>
     <string name="app_name">Wanderly</string>
+    <string name="tagline">Plan it. Walk it. Hear its story.</string>
+
+    <!-- Login -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Log in to continue your adventure</string>
+    <string name="action_login">Log in</string>
+    <string name="login_to_register">Don\'t have an account? Sign up</string>
+
+    <!-- Register -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Start collecting adventures</string>
+    <string name="action_signup">Sign up</string>
+    <string name="register_to_login">Already have an account? Log in</string>
+    <string name="password_helper">At least 8 characters, one letter and one digit</string>
+
+    <!-- Câmpuri -->
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_name">Name</string>
+    <string name="hint_address">Address</string>
+    <string name="hint_age">Age</string>
+
+    <!-- Home -->
+    <string name="greeting_morning">Good morning,</string>
+    <string name="greeting_afternoon">Good afternoon,</string>
+    <string name="greeting_evening">Good evening,</string>
+    <string name="home_hero_title">Where to next?</string>
+    <string name="home_hero_subtitle">A trip shaped around you, in seconds.</string>
+    <string name="action_start_adventure">Start adventure</string>
+    <string name="home_profile_title">Your profile</string>
+    <string name="label_email">Email</string>
+    <string name="label_address">Address</string>
+    <string name="label_age">Age</string>
+    <string name="age_value">%1$d years</string>
+    <string name="action_logout">Log out</string>
+    <string name="coming_soon">Coming soon</string>
+
+    <string name="logo_description">Wanderly logo</string>
 </resources>
