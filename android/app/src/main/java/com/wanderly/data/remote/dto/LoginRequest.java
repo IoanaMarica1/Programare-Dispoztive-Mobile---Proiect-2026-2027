@@ -1,4 +1,4 @@
-package com.wanderly.network.dto;
+package com.wanderly.data.remote.dto;
 
 public class LoginRequest {
     public String email;

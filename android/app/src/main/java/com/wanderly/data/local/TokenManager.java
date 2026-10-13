@@ -1,4 +1,4 @@
-package com.wanderly.data;
+package com.wanderly.data.local;
 
 import android.content.Context;
 import android.content.SharedPreferences;

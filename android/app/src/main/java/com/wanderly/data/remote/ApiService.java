@@ -1,9 +1,9 @@
-package com.wanderly.network;
+package com.wanderly.data.remote;
 
-import com.wanderly.network.dto.AuthResponse;
-import com.wanderly.network.dto.LoginRequest;
-import com.wanderly.network.dto.RegisterRequest;
-import com.wanderly.network.dto.UserResponse;
+import com.wanderly.data.remote.dto.AuthResponse;
+import com.wanderly.data.remote.dto.LoginRequest;
+import com.wanderly.data.remote.dto.RegisterRequest;
+import com.wanderly.data.remote.dto.UserResponse;
 
 import retrofit2.Call;
 import retrofit2.http.Body;

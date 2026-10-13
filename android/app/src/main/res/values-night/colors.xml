@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#0E171B</color>
+    <color name="surface_card">#16232A</color>
+    <color name="card_glass">#E6142229</color>
+    <color name="text_primary">#EAF2F3</color>
+    <color name="text_secondary">#9FB1B8</color>
+    <color name="text_link">@color/teal_300</color>
+    <color name="outline_soft">#26FFFFFF</color>
+    <color name="avatar_bg">@color/teal_900</color>
+    <color name="avatar_text">@color/teal_100</color>
+</resources>

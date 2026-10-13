@@ -1,4 +1,4 @@
-package com.wanderly.network.dto;
+package com.wanderly.data.remote.dto;
 
 import java.util.Map;
 public class ErrorResponse {

@@ -5,7 +5,7 @@ import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.wanderly.data.TokenManager;
+import com.wanderly.data.local.TokenManager;
 import com.wanderly.ui.auth.LoginActivity;
 import com.wanderly.ui.home.HomeActivity;
 
