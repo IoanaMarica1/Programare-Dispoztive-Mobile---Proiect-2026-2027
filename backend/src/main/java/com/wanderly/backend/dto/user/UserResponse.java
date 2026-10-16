@@ -1,11 +1,15 @@
 package com.wanderly.backend.dto.user;
 
+import java.util.UUID;
+
 public record UserResponse(
-        Long id,
+        UUID publicId,
         String email,
         String name,
         String profilePicture,
+        String bio,
         String address,
-        Integer age
+        Integer age,
+        Integer points
 ) {
 }

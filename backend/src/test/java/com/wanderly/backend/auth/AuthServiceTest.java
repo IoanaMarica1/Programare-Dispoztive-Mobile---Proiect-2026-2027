@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,7 +55,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("ana@test.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User u = invocation.getArgument(0);
-            u.setId(1L);
+            ReflectionTestUtils.setField(u, "id", 1L);
             return u;
         });
 
@@ -75,7 +76,7 @@ class AuthServiceTest {
 
         assertThat(jwtService.parseToken(response.token()).getSubject()).isEqualTo("ana@test.com");
         assertThat(response.user().email()).isEqualTo("ana@test.com");
-        assertThat(response.user().id()).isEqualTo(1L);
+        assertThat(response.user().publicId()).isEqualTo(user.getPublicId());
     }
 
     @Test
@@ -134,13 +135,14 @@ class AuthServiceTest {
     // ---------- helper ----------
 
     private User existingUser(String rawPassword) {
-        return User.builder()
-                .id(1L)
+        User user = User.builder()
                 .email("ana@test.com")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .name("Ana")
                 .address("Cluj")
                 .age(26)
                 .build();
+        ReflectionTestUtils.setField(user, "id", 1L);
+        return user;
     }
 }

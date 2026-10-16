@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -40,7 +41,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /register cu date valide → 201 + token")
     void register_validBody_returns201() throws Exception {
-        UserResponse user = new UserResponse(1L, "ana@test.com", "Ana", null, "Cluj", 26);
+        UserResponse user = new UserResponse(UUID.randomUUID(), "ana@test.com", "Ana", null, null, "Cluj", 26, 0);
         when(authService.register(any())).thenReturn(new AuthenticationResponse("fake-token", user));
 
         mockMvc.perform(post("/api/auth/register")
