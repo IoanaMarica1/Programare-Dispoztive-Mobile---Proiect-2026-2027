@@ -10,5 +10,7 @@
         <item name="colorSurface">@color/surface_card</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <!-- Light status bar icons on the dark background -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

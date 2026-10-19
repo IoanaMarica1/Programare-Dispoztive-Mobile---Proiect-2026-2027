@@ -1,5 +1,6 @@
 package com.wanderly.backend.auth;
 
+import com.wanderly.backend.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,13 +11,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class JwtAuthFilterTest {
 
     private static final String SECRET = "test-secret-key-that-is-long-enough-for-hs256-0123456789";
 
     private final JwtService jwtService = new JwtService(SECRET, 3_600_000L);
-    private final JwtAuthFilter filter = new JwtAuthFilter(jwtService);
+    private final UserRepository userRepository = mock(UserRepository.class);
+    private final JwtAuthFilter filter = new JwtAuthFilter(jwtService, userRepository);
 
     @AfterEach
     void clearSecurityContext() {
@@ -38,6 +42,7 @@ class JwtAuthFilterTest {
     @Test
     @DisplayName("Token valid: userul este autentificat cu email-ul și rolul din token")
     void validToken_setsAuthentication() throws Exception {
+        when(userRepository.existsByEmail("ana@test.com")).thenReturn(true);
         String token = jwtService.generateToken("ana@test.com", "USER");
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users/profile");
         request.addHeader("Authorization", "Bearer " + token);
@@ -50,6 +55,21 @@ class JwtAuthFilterTest {
         assertThat(auth.getName()).isEqualTo("ana@test.com");
         assertThat(auth.getAuthorities()).extracting("authority").containsExactly("ROLE_USER");
         assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Cont șters: token valid, dar userul nu mai există → NU este autentificat")
+    void validTokenForDeletedUser_doesNotAuthenticate() throws Exception {
+        when(userRepository.existsByEmail("ana@test.com")).thenReturn(false);
+        String token = jwtService.generateToken("ana@test.com", "USER");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users/profile");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(chain.getRequest()).isNotNull(); // Spring Security va răspunde apoi cu 401
     }
 
     @Test

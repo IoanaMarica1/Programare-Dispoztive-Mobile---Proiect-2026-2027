@@ -9,17 +9,18 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.Set;
 
-// Priority and pace are optional wizard steps and may be null.
+// Every question accepts several answers. Priorities and paces are optional wizard steps
+// and may be empty or null.
 public record PreferencesRequest(
 
-        @NotNull(message = "Travel mode is required.")
-        TravelMode travelMode,
+        @NotEmpty(message = "Choose at least one travel mode.")
+        Set<@NotNull TravelMode> travelModes,
 
         @NotEmpty(message = "Choose at least one interest.")
         Set<@NotNull Interest> interests,
 
-        Priority priority,
+        Set<@NotNull Priority> priorities,
 
-        Pace pace
+        Set<@NotNull Pace> paces
 ) {
 }

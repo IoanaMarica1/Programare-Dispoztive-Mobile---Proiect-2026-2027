@@ -31,4 +31,54 @@
     <style name="TextAppearance.Wanderly.Label" parent="TextAppearance.Material3.LabelMedium">
         <item name="android:textColor">@color/text_secondary</item>
     </style>
+
+    <style name="TextAppearance.Wanderly.Section" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Wanderly.Chip" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <!-- Large selectable chip used by the preference wizard -->
+    <style name="Widget.Wanderly.Chip.Choice" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/chip_background</item>
+        <item name="chipStrokeColor">@color/chip_stroke</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipMinHeight">@dimen/chip_height</item>
+        <item name="chipCornerRadius">@dimen/radius_input</item>
+        <item name="chipStartPadding">@dimen/space_s</item>
+        <item name="chipEndPadding">@dimen/space_s</item>
+        <item name="android:textAppearance">@style/TextAppearance.Wanderly.Chip</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Read-only chip that shows a saved preference on the profile -->
+    <style name="Widget.Wanderly.Chip.Tag" parent="Widget.Material3.Chip.Assist">
+        <item name="chipBackgroundColor">@color/chip_checked_bg</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipCornerRadius">@dimen/radius_input</item>
+        <item name="android:textColor">@color/avatar_text</item>
+        <item name="android:clickable">false</item>
+        <item name="android:focusable">false</item>
+    </style>
+
+    <style name="Widget.Wanderly.Progress" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="indicatorColor">@color/progress_indicator</item>
+        <item name="trackColor">@color/progress_track</item>
+        <item name="trackThickness">@dimen/progress_thickness</item>
+        <item name="trackCornerRadius">@dimen/space_xs</item>
+        <item name="trackStopIndicatorSize">0dp</item>
+        <item name="indicatorTrackGapSize">0dp</item>
+    </style>
+
+    <!-- Small text action such as "Edit" next to a section title -->
+    <style name="Widget.Wanderly.Link" parent="">
+        <item name="android:textColor">@color/text_link</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:padding">@dimen/space_s</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
 </resources>

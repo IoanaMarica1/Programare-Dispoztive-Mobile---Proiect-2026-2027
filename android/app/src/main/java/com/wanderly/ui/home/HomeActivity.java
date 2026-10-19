@@ -3,6 +3,7 @@ package com.wanderly.ui.home;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,9 +16,11 @@ import com.wanderly.data.local.TokenManager;
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.UserResponse;
 import com.wanderly.ui.auth.LoginActivity;
+import com.wanderly.ui.common.Avatars;
+import com.wanderly.ui.preferences.PreferencesActivity;
+import com.wanderly.ui.profile.ProfileActivity;
 
 import java.util.Calendar;
-import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -25,7 +28,8 @@ import retrofit2.Response;
 
 public class HomeActivity extends AppCompatActivity {
 
-    private TextView greetingText, welcomeText, avatarText, emailText, addressText, ageText;
+    private TextView greetingText, welcomeText, avatarInitial, emailText, addressText, ageText;
+    private ImageView avatarPhoto;
     private ProgressBar progressBar;
     private TokenManager tokenManager;
 
@@ -38,7 +42,8 @@ public class HomeActivity extends AppCompatActivity {
 
         greetingText = findViewById(R.id.greetingText);
         welcomeText = findViewById(R.id.welcomeText);
-        avatarText = findViewById(R.id.avatarText);
+        avatarInitial = findViewById(R.id.avatarInitial);
+        avatarPhoto = findViewById(R.id.avatarPhoto);
         emailText = findViewById(R.id.emailText);
         addressText = findViewById(R.id.addressText);
         ageText = findViewById(R.id.ageText);
@@ -46,11 +51,23 @@ public class HomeActivity extends AppCompatActivity {
 
         greetingText.setText(greetingForNow());
 
+        // The preference wizard is the first step of Start Adventure (story B1).
         findViewById(R.id.startAdventureButton).setOnClickListener(v ->
-                Toast.makeText(this, R.string.coming_soon, Toast.LENGTH_SHORT).show());
+                startActivity(new Intent(this, PreferencesActivity.class)));
+        findViewById(R.id.avatarButton).setOnClickListener(v -> openProfile());
+        findViewById(R.id.profileCard).setOnClickListener(v -> openProfile());
         findViewById(R.id.logoutButton).setOnClickListener(v -> logout());
+    }
 
+    // Reloads so changes made on the profile screen show up here too.
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadProfile();
+    }
+
+    private void openProfile() {
+        startActivity(new Intent(this, ProfileActivity.class));
     }
 
     private void loadProfile() {
@@ -62,6 +79,7 @@ public class HomeActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(@NonNull Call<UserResponse> call,
                                            @NonNull Response<UserResponse> response) {
+                        if (isDestroyed()) return;
                         progressBar.setVisibility(View.GONE);
 
                         if (response.isSuccessful() && response.body() != null) {
@@ -90,7 +108,7 @@ public class HomeActivity extends AppCompatActivity {
         String name = user.name != null ? user.name.trim() : "";
 
         welcomeText.setText(firstName(name));
-        avatarText.setText(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT));
+        Avatars.bind(avatarPhoto, avatarInitial, name, user.profilePicture);
         emailText.setText(user.email);
         addressText.setText(user.address);
         ageText.setText(user.age != null ? getString(R.string.age_value, user.age) : "—");

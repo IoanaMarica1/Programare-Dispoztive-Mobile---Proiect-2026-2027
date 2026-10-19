@@ -3,6 +3,7 @@ package com.wanderly.data.remote;
 import android.content.Context;
 
 import com.google.gson.Gson;
+import com.wanderly.BuildConfig;
 import com.wanderly.data.local.TokenManager;
 import com.wanderly.data.remote.dto.ErrorResponse;
 
@@ -17,7 +18,8 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public final class ApiClient {
-    public static final String BASE_URL = "http://localhost:8080/";
+    /** Set per build in app/build.gradle.kts (Gradle property "apiUrl"). */
+    public static final String BASE_URL = BuildConfig.BASE_URL;
 
     private static ApiService service;
 
@@ -58,6 +60,14 @@ public final class ApiClient {
         }
         return service;
     }
+
+    /** The backend returns uploads as relative paths, e.g. "/uploads/avatars/x.jpg". */
+    public static String absoluteUrl(String path) {
+        if (path == null || path.isEmpty()) return null;
+        if (path.startsWith("http://") || path.startsWith("https://")) return path;
+        return BASE_URL + (path.startsWith("/") ? path.substring(1) : path);
+    }
+
     public static ErrorResponse parseError(Response<?> response) {
         try (ResponseBody body = response.errorBody()) {
             if (body != null) {

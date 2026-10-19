@@ -21,6 +21,7 @@ import com.wanderly.data.remote.dto.AuthResponse;
 import com.wanderly.data.remote.dto.ErrorResponse;
 import com.wanderly.data.remote.dto.LoginRequest;
 import com.wanderly.ui.home.HomeActivity;
+import com.wanderly.ui.profile.ProfileActivity;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -83,7 +84,7 @@ public class LoginActivity extends AppCompatActivity {
                         setLoading(false);
                         if (response.isSuccessful() && response.body() != null) {
                             tokenManager.saveToken(response.body().token);
-                            goToHome();
+                            goToProfile();
                         } else {
                             ErrorResponse error = ApiClient.parseError(response);
                             String message = (error != null && error.message != null)
@@ -103,10 +104,11 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    private void goToHome() {
-        Intent intent = new Intent(this, HomeActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
+    // Lands on the profile, with Home underneath so the back arrow returns there.
+    private void goToProfile() {
+        Intent home = new Intent(this, HomeActivity.class);
+        home.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivities(new Intent[]{home, new Intent(this, ProfileActivity.class)});
         finish();
     }
 

@@ -25,4 +25,11 @@
     <color name="outline_soft">#1A12202A</color>
     <color name="avatar_bg">@color/teal_100</color>
     <color name="avatar_text">@color/teal_900</color>
+    <color name="avatar_ring">@color/white</color>
+    <color name="chip_checked_bg">@color/teal_100</color>
+    <color name="chip_checked_stroke">@color/teal_500</color>
+    <color name="rank_badge_bg">@color/sunset_500</color>
+    <color name="rank_badge_text">@color/white</color>
+    <color name="progress_indicator">@color/teal_500</color>
+    <color name="progress_track">#1A0E6E7A</color>
 </resources>

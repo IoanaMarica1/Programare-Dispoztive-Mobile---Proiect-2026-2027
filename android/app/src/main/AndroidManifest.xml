@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 17+ (targetSdk 37) blocks private-network addresses such as 10.0.2.2 / 192.168.x.x without it. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:allowBackup="true"
@@ -34,6 +36,19 @@
             android:theme="@style/Theme.Wanderly.Auth"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.home.HomeActivity" />
+
+        <activity android:name=".ui.profile.ProfileActivity" />
+
+        <activity android:name=".ui.profile.CountryVisitsActivity" />
+
+        <activity
+            android:name=".ui.profile.EditProfileActivity"
+            android:theme="@style/Theme.Wanderly.Auth"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.preferences.PreferencesActivity"
+            android:theme="@style/Theme.Wanderly.Auth" />
 
     </application>
 

@@ -16,6 +16,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 10.0.2.2 is the host PC as seen from the emulator.
+        // On a real phone, build with -PapiUrl=http://<pc-ip>:8080/ (or set apiUrl in ~/.gradle/gradle.properties).
+        val apiUrl = (project.findProperty("apiUrl") as String?) ?: "http://10.0.2.2:8080/"
+        buildConfigField("String", "BASE_URL", "\"$apiUrl\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -43,4 +52,5 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 }

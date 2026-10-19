@@ -33,20 +33,25 @@ public class PreferencesService {
         Preferences preferences = preferencesRepository.findByUserId(user.getId())
                 .orElseGet(() -> Preferences.builder().user(user).build());
 
-        preferences.setTravelMode(request.travelMode());
+        preferences.setTravelModes(new HashSet<>(request.travelModes()));
         preferences.setInterests(new HashSet<>(request.interests()));
-        preferences.setPriority(request.priority());
-        preferences.setPace(request.pace());
+        preferences.setPriorities(copyOrEmpty(request.priorities()));
+        preferences.setPaces(copyOrEmpty(request.paces()));
 
         return toResponse(preferencesRepository.save(preferences));
     }
 
     private PreferencesResponse toResponse(Preferences preferences) {
         return new PreferencesResponse(
-                preferences.getTravelMode(),
+                Set.copyOf(preferences.getTravelModes()),
                 Set.copyOf(preferences.getInterests()),
-                preferences.getPriority(),
-                preferences.getPace()
+                Set.copyOf(preferences.getPriorities()),
+                Set.copyOf(preferences.getPaces())
         );
+    }
+
+    // A skipped optional step may arrive as null.
+    private static <T> Set<T> copyOrEmpty(Set<T> values) {
+        return values == null ? new HashSet<>() : new HashSet<>(values);
     }
 }

@@ -64,24 +64,25 @@ class PreferencesServiceTest {
         when(preferencesRepository.save(any(Preferences.class))).thenAnswer(i -> i.getArgument(0));
 
         PreferencesResponse response = preferencesService.savePreferences("ana@test.com", new PreferencesRequest(
-                TravelMode.SOLO, Set.of(Interest.HISTORY, Interest.FOOD), Priority.CULTURE, Pace.BALANCED));
+                Set.of(TravelMode.SOLO, TravelMode.FRIENDS), Set.of(Interest.HISTORY, Interest.FOOD),
+                Set.of(Priority.CULTURE, Priority.BUDGET), Set.of(Pace.BALANCED)));
 
         ArgumentCaptor<Preferences> saved = ArgumentCaptor.forClass(Preferences.class);
         verify(preferencesRepository).save(saved.capture());
         assertThat(saved.getValue().getUser()).isSameAs(user);
-        assertThat(response.travelMode()).isEqualTo(TravelMode.SOLO);
+        assertThat(response.travelModes()).containsExactlyInAnyOrder(TravelMode.SOLO, TravelMode.FRIENDS);
         assertThat(response.interests()).containsExactlyInAnyOrder(Interest.HISTORY, Interest.FOOD);
-        assertThat(response.priority()).isEqualTo(Priority.CULTURE);
-        assertThat(response.pace()).isEqualTo(Pace.BALANCED);
+        assertThat(response.priorities()).containsExactlyInAnyOrder(Priority.CULTURE, Priority.BUDGET);
+        assertThat(response.paces()).containsExactly(Pace.BALANCED);
     }
 
     @Test
-    @DisplayName("Save: preferințe existente → se actualizează același rând, pașii săriți devin null")
+    @DisplayName("Save: preferințe existente → se actualizează același rând, pașii săriți devin goi")
     void savePreferences_existing_updatesSameRow() {
         Preferences existing = Preferences.builder()
-                .user(user).travelMode(TravelMode.FAMILY)
+                .user(user).travelModes(Set.of(TravelMode.FAMILY))
                 .interests(new HashSet<>(Set.of(Interest.NATURE)))
-                .priority(Priority.BUDGET).pace(Pace.PACKED)
+                .priorities(Set.of(Priority.BUDGET)).paces(Set.of(Pace.PACKED))
                 .build();
         ReflectionTestUtils.setField(existing, "id", 5L);
         when(userRepository.findByEmail("ana@test.com")).thenReturn(Optional.of(user));
@@ -89,30 +90,30 @@ class PreferencesServiceTest {
         when(preferencesRepository.save(any(Preferences.class))).thenAnswer(i -> i.getArgument(0));
 
         PreferencesResponse response = preferencesService.savePreferences("ana@test.com",
-                new PreferencesRequest(TravelMode.FRIENDS, Set.of(Interest.NIGHTLIFE), null, null));
+                new PreferencesRequest(Set.of(TravelMode.FRIENDS), Set.of(Interest.NIGHTLIFE), null, Set.of()));
 
         verify(preferencesRepository).save(existing);
         assertThat(existing.getId()).isEqualTo(5L);
-        assertThat(response.travelMode()).isEqualTo(TravelMode.FRIENDS);
+        assertThat(response.travelModes()).containsExactly(TravelMode.FRIENDS);
         assertThat(response.interests()).containsExactly(Interest.NIGHTLIFE);
-        assertThat(response.priority()).isNull();
-        assertThat(response.pace()).isNull();
+        assertThat(response.priorities()).isEmpty();
+        assertThat(response.paces()).isEmpty();
     }
 
     @Test
-    @DisplayName("Validare: travel mode lipsă și fără interese → respins")
+    @DisplayName("Validare: fără travel mode și fără interese → respins")
     void request_missingRequiredSteps_failsValidation() {
         Set<ConstraintViolation<PreferencesRequest>> violations =
-                VALIDATOR.validate(new PreferencesRequest(null, Set.of(), Priority.BUDGET, Pace.RELAXED));
+                VALIDATOR.validate(new PreferencesRequest(Set.of(), Set.of(), Set.of(Priority.BUDGET), Set.of(Pace.RELAXED)));
 
         assertThat(violations).extracting(v -> v.getPropertyPath().toString())
-                .containsExactlyInAnyOrder("travelMode", "interests");
+                .containsExactlyInAnyOrder("travelModes", "interests");
     }
 
     @Test
     @DisplayName("Validare: priority și pace sunt opționale")
     void request_optionalStepsSkipped_passesValidation() {
         assertThat(VALIDATOR.validate(
-                new PreferencesRequest(TravelMode.COUPLE, Set.of(Interest.ART), null, null))).isEmpty();
+                new PreferencesRequest(Set.of(TravelMode.COUPLE), Set.of(Interest.ART), null, null))).isEmpty();
     }
 }

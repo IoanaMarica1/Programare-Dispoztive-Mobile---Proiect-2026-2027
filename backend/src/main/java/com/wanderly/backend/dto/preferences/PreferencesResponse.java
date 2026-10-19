@@ -8,9 +8,9 @@ import com.wanderly.backend.model.TravelMode;
 import java.util.Set;
 
 public record PreferencesResponse(
-        TravelMode travelMode,
+        Set<TravelMode> travelModes,
         Set<Interest> interests,
-        Priority priority,
-        Pace pace
+        Set<Priority> priorities,
+        Set<Pace> paces
 ) {
 }

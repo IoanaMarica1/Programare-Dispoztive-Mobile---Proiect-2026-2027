@@ -35,7 +35,126 @@
     <string name="label_age">Age</string>
     <string name="age_value">%1$d years</string>
     <string name="action_logout">Log out</string>
-    <string name="coming_soon">Coming soon</string>
+    <string name="home_view_profile">See full profile</string>
 
     <string name="logo_description">Wanderly logo</string>
+
+    <!-- Common -->
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_show_more">Show more</string>
+    <string name="error_network">Cannot reach the server.</string>
+    <string name="error_session_expired">Your session has expired. Please log in again.</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Your profile</string>
+    <string name="profile_avatar_description">Profile photo</string>
+    <string name="profile_load_failed">Could not load your profile.</string>
+    <string name="profile_points">Points</string>
+    <string name="profile_countries">Countries</string>
+    <string name="profile_next_rank">Next rank: %1$s</string>
+    <plurals name="profile_points_to_go">
+        <item quantity="one">%d point to go</item>
+        <item quantity="other">%d points to go</item>
+    </plurals>
+    <string name="profile_top_rank">You reached the top rank</string>
+    <string name="profile_top_rank_body">Every place you visit still counts.</string>
+    <string name="profile_about">About</string>
+    <string name="profile_bio_empty">Tap to tell other travelers a little about yourself.</string>
+    <string name="profile_edit_bio">Edit your bio</string>
+    <string name="profile_preferences">Travel preferences</string>
+    <string name="profile_preferences_empty_title">How do you like to travel?</string>
+    <string name="profile_preferences_empty_body">Answer four quick questions and every plan will fit you.</string>
+    <string name="profile_preferences_action">Set my preferences</string>
+    <string name="profile_countries_title">Visited countries</string>
+    <string name="profile_history_empty_icon" translatable="false">🧭</string>
+    <string name="profile_history_empty_title">No adventures yet</string>
+    <string name="profile_history_empty_body">Places you visit show up here, grouped by country. Your first one is worth 10 points.</string>
+    <string name="profile_history_action">Start your first adventure</string>
+    <string name="history_load_failed">Could not load your history.</string>
+
+    <!-- Ranks (thresholds live in Rank.java) -->
+    <string name="rank_tourist">Tourist</string>
+    <string name="rank_explorer">Explorer</string>
+    <string name="rank_navigator">Navigator</string>
+    <string name="rank_pathfinder">Pathfinder</string>
+    <string name="rank_legend">Legend</string>
+    <string name="rank_badge">★ %1$s</string>
+
+    <!-- History -->
+    <string name="country_meta">%1$s · last visit %2$s</string>
+    <string name="visit_meta">%1$s · %2$s</string>
+    <plurals name="places_count">
+        <item quantity="one">%d place</item>
+        <item quantity="other">%d places</item>
+    </plurals>
+    <plurals name="places_visited">
+        <item quantity="one">%d place visited</item>
+        <item quantity="other">%d places visited</item>
+    </plurals>
+
+    <!-- Edit profile -->
+    <string name="edit_profile_title">Edit profile</string>
+    <string name="edit_profile_subtitle">Keep your traveler card up to date</string>
+    <string name="edit_profile_change_photo">Change photo</string>
+    <string name="hint_home_city">Home city</string>
+    <string name="hint_bio">Bio</string>
+    <string name="action_save">Save changes</string>
+    <string name="edit_profile_saved">Profile updated</string>
+    <string name="edit_profile_failed">Could not save your profile. Please try again.</string>
+    <string name="avatar_uploaded">Photo updated</string>
+    <string name="avatar_failed">Could not upload the photo. Please try again.</string>
+    <string name="avatar_unreadable">This image could not be read.</string>
+    <string name="error_name_required">Name is required</string>
+    <string name="error_name_too_long">At most 100 characters</string>
+    <string name="error_city_required">Home city is required</string>
+    <string name="error_city_too_long">At most 50 characters</string>
+    <string name="error_bio_too_long">At most 500 characters</string>
+
+    <!-- Preference wizard -->
+    <string name="wizard_step">Step %1$d of %2$d</string>
+    <string name="wizard_optional">Optional</string>
+    <string name="action_next">Next</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_save_preferences">Save preferences</string>
+    <string name="wizard_saved">Preferences saved</string>
+    <string name="wizard_save_failed">Could not save your preferences. Please try again.</string>
+    <string name="wizard_load_failed">Could not load your saved preferences.</string>
+
+    <string name="wizard_travel_mode_title">Who are you traveling with?</string>
+    <string name="wizard_travel_mode_subtitle">Pick all that apply. We will plan the pace and places around your group.</string>
+    <string name="wizard_interests_title">What do you love?</string>
+    <string name="wizard_interests_subtitle">Pick as many as you like.</string>
+    <string name="wizard_priority_title">What matters most?</string>
+    <string name="wizard_priority_subtitle">Pick everything a great trip needs.</string>
+    <string name="wizard_pace_title">How packed should your days be?</string>
+    <string name="wizard_pace_subtitle">Pick one or more. You can always change this later.</string>
+
+    <!-- Same order as the values in PreferencesWizard.Step -->
+    <string-array name="travel_mode_labels">
+        <item>🧍 Solo</item>
+        <item>💑 Couple</item>
+        <item>🧑‍🤝‍🧑 Friends</item>
+        <item>👨‍👩‍👧 Family</item>
+    </string-array>
+    <string-array name="interest_labels">
+        <item>🏛️ History</item>
+        <item>🌲 Nature</item>
+        <item>🍝 Food</item>
+        <item>🌙 Nightlife</item>
+        <item>🎨 Art</item>
+        <item>🧗 Adventure</item>
+    </string-array>
+    <string-array name="priority_labels">
+        <item>🎉 Social activities</item>
+        <item>🧘 Relaxation</item>
+        <item>🎭 Culture</item>
+        <item>💰 Budget</item>
+    </string-array>
+    <string-array name="pace_labels">
+        <item>🐢 Relaxed</item>
+        <item>⚖️ Balanced</item>
+        <item>⚡ Packed</item>
+    </string-array>
 </resources>

@@ -42,15 +42,15 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/avatarText"
+            <FrameLayout
+                android:id="@+id/avatarButton"
                 android:layout_width="@dimen/avatar_size"
                 android:layout_height="@dimen/avatar_size"
-                android:background="@drawable/bg_avatar"
-                android:gravity="center"
-                android:textColor="@color/avatar_text"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/home_view_profile">
+
+                <include layout="@layout/view_avatar" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Cardul principal cu poza -->
@@ -124,9 +124,12 @@
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/profileCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_m"
+            android:clickable="true"
+            android:focusable="true"
             app:cardBackgroundColor="@color/surface_card"
             app:cardCornerRadius="@dimen/radius_card_small"
             app:cardElevation="0dp"
@@ -179,6 +182,18 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:drawablePadding="@dimen/space_xs"
+                    app:drawableEndCompat="@drawable/ic_chevron_right"
+                    app:drawableTint="@color/text_link"
+                    android:gravity="center_vertical"
+                    android:text="@string/home_view_profile"
+                    android:textColor="@color/text_link"
+                    android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -10,6 +10,8 @@
         <item name="colorSurface">@color/surface_card</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <!-- Dark status bar icons on the light screens (profile, home, visits) -->
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="Theme.Wanderly" parent="Base.Theme.Wanderly" />

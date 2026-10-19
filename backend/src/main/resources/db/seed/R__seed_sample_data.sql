@@ -49,19 +49,57 @@ VALUES
 
 -- ---------- preferences ----------
 -- Linked by email and public_id instead of hard-coded ids, so the identity
--- sequences stay untouched. Radu skipped the optional priority and pace steps.
+-- sequences stay untouched. Every question accepts several answers; Radu skipped
+-- the optional priority and pace steps, so he has no rows in those tables.
 
-INSERT INTO preferences (public_id, user_id, travel_mode, priority, pace)
-SELECT p.public_id::uuid, u.id, p.travel_mode, p.priority, p.pace
+INSERT INTO preferences (public_id, user_id)
+SELECT p.public_id::uuid, u.id
 FROM (VALUES
-    ('b2000000-0000-4000-8000-000000000001', 'ana.pop@example.com',        'SOLO',    'CULTURE',    'BALANCED'),
-    ('b2000000-0000-4000-8000-000000000002', 'mihai.ionescu@example.com',  'COUPLE',  'RELAXATION', 'RELAXED'),
-    ('b2000000-0000-4000-8000-000000000003', 'elena.dumitru@example.com',  'SOLO',    'BUDGET',     'PACKED'),
-    ('b2000000-0000-4000-8000-000000000004', 'andrei.popescu@example.com', 'FRIENDS', 'SOCIAL',     'PACKED'),
-    ('b2000000-0000-4000-8000-000000000005', 'ioana.marin@example.com',    'FAMILY',  'RELAXATION', 'BALANCED'),
-    ('b2000000-0000-4000-8000-000000000006', 'radu.stan@example.com',      'COUPLE',  NULL,         NULL)
-) AS p (public_id, email, travel_mode, priority, pace)
+    ('b2000000-0000-4000-8000-000000000001', 'ana.pop@example.com'),
+    ('b2000000-0000-4000-8000-000000000002', 'mihai.ionescu@example.com'),
+    ('b2000000-0000-4000-8000-000000000003', 'elena.dumitru@example.com'),
+    ('b2000000-0000-4000-8000-000000000004', 'andrei.popescu@example.com'),
+    ('b2000000-0000-4000-8000-000000000005', 'ioana.marin@example.com'),
+    ('b2000000-0000-4000-8000-000000000006', 'radu.stan@example.com')
+) AS p (public_id, email)
 JOIN users u ON u.email = p.email;
+
+INSERT INTO preference_travel_modes (preferences_id, travel_mode)
+SELECT pr.id, t.travel_mode
+FROM (VALUES
+    ('b2000000-0000-4000-8000-000000000001', 'SOLO'),
+    ('b2000000-0000-4000-8000-000000000001', 'FRIENDS'),
+    ('b2000000-0000-4000-8000-000000000002', 'COUPLE'),
+    ('b2000000-0000-4000-8000-000000000003', 'SOLO'),
+    ('b2000000-0000-4000-8000-000000000004', 'FRIENDS'),
+    ('b2000000-0000-4000-8000-000000000005', 'FAMILY'),
+    ('b2000000-0000-4000-8000-000000000005', 'COUPLE'),
+    ('b2000000-0000-4000-8000-000000000006', 'COUPLE')
+) AS t (preferences_public_id, travel_mode)
+JOIN preferences pr ON pr.public_id = t.preferences_public_id::uuid;
+
+INSERT INTO preference_priorities (preferences_id, priority)
+SELECT pr.id, r.priority
+FROM (VALUES
+    ('b2000000-0000-4000-8000-000000000001', 'CULTURE'),
+    ('b2000000-0000-4000-8000-000000000002', 'RELAXATION'),
+    ('b2000000-0000-4000-8000-000000000003', 'BUDGET'),
+    ('b2000000-0000-4000-8000-000000000003', 'CULTURE'),
+    ('b2000000-0000-4000-8000-000000000004', 'SOCIAL'),
+    ('b2000000-0000-4000-8000-000000000005', 'RELAXATION')
+) AS r (preferences_public_id, priority)
+JOIN preferences pr ON pr.public_id = r.preferences_public_id::uuid;
+
+INSERT INTO preference_paces (preferences_id, pace)
+SELECT pr.id, c.pace
+FROM (VALUES
+    ('b2000000-0000-4000-8000-000000000001', 'BALANCED'),
+    ('b2000000-0000-4000-8000-000000000002', 'RELAXED'),
+    ('b2000000-0000-4000-8000-000000000003', 'PACKED'),
+    ('b2000000-0000-4000-8000-000000000004', 'PACKED'),
+    ('b2000000-0000-4000-8000-000000000005', 'BALANCED')
+) AS c (preferences_public_id, pace)
+JOIN preferences pr ON pr.public_id = c.preferences_public_id::uuid;
 
 INSERT INTO preference_interests (preferences_id, interest)
 SELECT pr.id, i.interest
