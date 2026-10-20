@@ -12,7 +12,7 @@ import androidx.core.content.ContextCompat;
 
 import com.wanderly.data.local.TokenManager;
 import com.wanderly.ui.auth.LoginActivity;
-import com.wanderly.ui.home.HomeActivity;
+import com.wanderly.ui.profile.ProfileActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openNext() {
         TokenManager tokenManager = new TokenManager(this);
-        Class<?> next = tokenManager.isLoggedIn() ? HomeActivity.class : LoginActivity.class;
+        Class<?> next = tokenManager.isLoggedIn() ? ProfileActivity.class : LoginActivity.class;
 
         startActivity(new Intent(this, next));
         finish();

@@ -14,22 +14,12 @@
         android:orientation="vertical"
         android:padding="@dimen/space_l">
 
-        <!-- Bara de sus: înapoi + editare -->
+        <!-- Bara de sus: titlu + editare -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/backButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="-12dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/action_back"
-                android:src="@drawable/ic_arrow_back"
-                app:tint="@color/text_primary" />
 
             <TextView
                 android:layout_width="0dp"
@@ -431,5 +421,15 @@
             android:layout_gravity="center"
             android:layout_marginTop="@dimen/space_m"
             android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/logoutButton"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="@dimen/space_l"
+            android:text="@string/action_logout"
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 </ScrollView>

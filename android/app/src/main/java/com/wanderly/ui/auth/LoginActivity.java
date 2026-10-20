@@ -20,7 +20,6 @@ import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.AuthResponse;
 import com.wanderly.data.remote.dto.ErrorResponse;
 import com.wanderly.data.remote.dto.LoginRequest;
-import com.wanderly.ui.home.HomeActivity;
 import com.wanderly.ui.profile.ProfileActivity;
 
 import retrofit2.Call;
@@ -104,11 +103,10 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // Lands on the profile, with Home underneath so the back arrow returns there.
     private void goToProfile() {
-        Intent home = new Intent(this, HomeActivity.class);
-        home.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivities(new Intent[]{home, new Intent(this, ProfileActivity.class)});
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
         finish();
     }
 

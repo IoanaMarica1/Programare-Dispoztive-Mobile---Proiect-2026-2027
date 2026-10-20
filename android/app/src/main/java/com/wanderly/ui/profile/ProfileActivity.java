@@ -18,11 +18,13 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.wanderly.R;
+import com.wanderly.data.local.TokenManager;
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.CountryHistoryResponse;
 import com.wanderly.data.remote.dto.PageResponse;
 import com.wanderly.data.remote.dto.PreferencesResponse;
 import com.wanderly.data.remote.dto.UserResponse;
+import com.wanderly.ui.auth.LoginActivity;
 import com.wanderly.ui.common.Avatars;
 import com.wanderly.ui.common.Formats;
 import com.wanderly.ui.common.Session;
@@ -78,7 +80,6 @@ public class ProfileActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         historyProgress = findViewById(R.id.historyProgress);
 
-        findViewById(R.id.backButton).setOnClickListener(v -> finish());
         findViewById(R.id.editProfileButton).setOnClickListener(v -> openEditProfile(false));
         findViewById(R.id.aboutCard).setOnClickListener(v -> openEditProfile(true));
         findViewById(R.id.editBioLink).setOnClickListener(v -> openEditProfile(true));
@@ -86,6 +87,7 @@ public class ProfileActivity extends AppCompatActivity {
         findViewById(R.id.startFirstAdventureButton).setOnClickListener(v -> openPreferences());
         editPreferencesLink.setOnClickListener(v -> openPreferences());
         showMoreCountriesButton.setOnClickListener(v -> loadCountries(false));
+        findViewById(R.id.logoutButton).setOnClickListener(v -> logout());
     }
 
     // Reloads after coming back from the edit screen or the wizard.
@@ -302,5 +304,13 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void openPreferences() {
         startActivity(new Intent(this, PreferencesActivity.class));
+    }
+
+    private void logout() {
+        new TokenManager(this).clear();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }

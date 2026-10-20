@@ -35,7 +35,6 @@
             android:name=".ui.auth.RegisterActivity"
             android:theme="@style/Theme.Wanderly.Auth"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".ui.home.HomeActivity" />
 
         <activity android:name=".ui.profile.ProfileActivity" />
 
