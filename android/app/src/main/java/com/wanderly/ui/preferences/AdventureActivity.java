@@ -13,6 +13,15 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import androidx.core.util.Pair;
 
+import androidx.annotation.NonNull;
+import com.wanderly.data.remote.ApiClient;
+import com.wanderly.data.remote.dto.GenerateTripRequest;
+import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.ui.common.Session;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class AdventureActivity extends AppCompatActivity {
 
     private Long startMillis, endMillis;
@@ -65,7 +74,43 @@ public class AdventureActivity extends AppCompatActivity {
             }
 
             // Placeholder until the backend endpoint exists (B3).
-            Toast.makeText(this, "Ready: " + destination, Toast.LENGTH_LONG).show();
+            GenerateTripRequest req = new GenerateTripRequest();
+            req.destination = destination;
+            req.startDate = java.time.Instant.ofEpochMilli(startMillis)
+                    .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString();
+            req.endDate = java.time.Instant.ofEpochMilli(endMillis)
+                    .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString();
+            req.dayStart = String.format(java.util.Locale.US, "%02d:%02d", startHour, startMinute);
+            req.dayEnd = String.format(java.util.Locale.US, "%02d:%02d", endHour, endMinute);
+
+            generateButton.setEnabled(false);
+            ApiClient.getService(this).generateTrip(req).enqueue(new Callback<TripResponse>() {
+                @Override
+                public void onResponse(@NonNull Call<TripResponse> call,
+                                       @NonNull Response<TripResponse> response) {
+                    if (isDestroyed()) return;
+                    generateButton.setEnabled(true);
+                    if (response.isSuccessful() && response.body() != null) {
+                        Toast.makeText(AdventureActivity.this,
+                                "Plan ready: " + response.body().stops.size() + " stops",
+                                Toast.LENGTH_LONG).show();
+                    } else if (response.code() == 401) {
+                        Session.expire(AdventureActivity.this);
+                    } else {
+                        Toast.makeText(AdventureActivity.this,
+                                "Could not generate plan (" + response.code() + ")",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<TripResponse> call, @NonNull Throwable t) {
+                    if (isDestroyed()) return;
+                    generateButton.setEnabled(true);
+                    Toast.makeText(AdventureActivity.this,
+                            "Network error", Toast.LENGTH_LONG).show();
+                }
+            });
         });
     }
 }

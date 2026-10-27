@@ -21,6 +21,8 @@ import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import com.wanderly.data.remote.dto.GenerateTripRequest;
+import com.wanderly.data.remote.dto.TripResponse;
 
 public interface ApiService {
 
@@ -55,4 +57,7 @@ public interface ApiService {
     Call<PageResponse<VisitResponse>> getVisitsInCountry(@Path("country") String country,
                                                          @Query("page") int page,
                                                          @Query("size") int size);
+
+    @POST("api/trips/generate")
+    Call<TripResponse> generateTrip(@Body GenerateTripRequest request);
 }
