@@ -1,5 +1,7 @@
 package com.wanderly.backend.service;
 
+import com.wanderly.backend.repository.UserRepository;
+import com.wanderly.backend.model.User;
 import com.wanderly.backend.dto.trip.GenerateTripRequest;
 import com.wanderly.backend.dto.trip.TripResponse;
 import com.wanderly.backend.model.Trip;
@@ -16,13 +18,18 @@ import java.util.List;
 public class TripService {
 
     private final TripRepository tripRepository;
+    private final UserRepository userRepository;
 
-    public TripService(TripRepository tripRepository) {
+    public TripService(TripRepository tripRepository, UserRepository userRepository) {
         this.tripRepository = tripRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
-    public TripResponse generate(User user, GenerateTripRequest req) {
+    public TripResponse generate(String email, GenerateTripRequest req) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
         Trip trip = Trip.builder()
                 .user(user)
                 .destination(req.destination())
@@ -35,7 +42,7 @@ public class TripService {
                 .dayEnd(req.dayEnd())
                 .build();
 
-        // Hardcoded placeholder plan (Rome), replaced by the AI in B3.
+        // Hardcoded placeholder plan (Rome), replaced by the AI later.
         trip.addStop(stop(1, 1, "Colosseum", "Historical", 41.8902, 12.4922, LocalTime.of(9, 30), 90));
         trip.addStop(stop(1, 2, "Roman Forum", "Ruins", 41.8925, 12.4853, LocalTime.of(11, 15), 55));
         trip.addStop(stop(1, 3, "Piazza Venezia", "Landmark", 41.8960, 12.4823, LocalTime.of(12, 30), 30));
