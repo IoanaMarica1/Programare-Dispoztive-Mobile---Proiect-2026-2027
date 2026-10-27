@@ -28,6 +28,7 @@ import com.wanderly.ui.auth.LoginActivity;
 import com.wanderly.ui.common.Avatars;
 import com.wanderly.ui.common.Formats;
 import com.wanderly.ui.common.Session;
+import com.wanderly.ui.preferences.AdventureActivity;
 import com.wanderly.ui.preferences.PreferencesActivity;
 import com.wanderly.ui.preferences.PreferencesWizard;
 
@@ -84,7 +85,8 @@ public class ProfileActivity extends AppCompatActivity {
         findViewById(R.id.aboutCard).setOnClickListener(v -> openEditProfile(true));
         findViewById(R.id.editBioLink).setOnClickListener(v -> openEditProfile(true));
         findViewById(R.id.setPreferencesButton).setOnClickListener(v -> openPreferences());
-        findViewById(R.id.startFirstAdventureButton).setOnClickListener(v -> openPreferences());
+        findViewById(R.id.startFirstAdventureButton).setOnClickListener(v ->
+                startActivity(new Intent(this, AdventureActivity.class)));
         editPreferencesLink.setOnClickListener(v -> openPreferences());
         showMoreCountriesButton.setOnClickListener(v -> loadCountries(false));
         findViewById(R.id.logoutButton).setOnClickListener(v -> logout());
