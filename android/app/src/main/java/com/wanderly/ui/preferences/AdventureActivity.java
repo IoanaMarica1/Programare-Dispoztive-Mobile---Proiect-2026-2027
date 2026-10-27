@@ -1,5 +1,6 @@
 package com.wanderly.ui.preferences;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +18,7 @@ import androidx.annotation.NonNull;
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
 import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.ui.adventure.PlanActivity;
 import com.wanderly.ui.common.Session;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -73,7 +75,6 @@ public class AdventureActivity extends AppCompatActivity {
                 return;
             }
 
-            // Placeholder until the backend endpoint exists (B3).
             GenerateTripRequest req = new GenerateTripRequest();
             req.destination = destination;
             req.startDate = java.time.Instant.ofEpochMilli(startMillis)
@@ -91,9 +92,9 @@ public class AdventureActivity extends AppCompatActivity {
                     if (isDestroyed()) return;
                     generateButton.setEnabled(true);
                     if (response.isSuccessful() && response.body() != null) {
-                        Toast.makeText(AdventureActivity.this,
-                                "Plan ready: " + response.body().stops.size() + " stops",
-                                Toast.LENGTH_LONG).show();
+                        Intent i = new Intent(AdventureActivity.this, PlanActivity.class);
+                        i.putExtra("trip", new com.google.gson.Gson().toJson(response.body()));
+                        startActivity(i);
                     } else if (response.code() == 401) {
                         Session.expire(AdventureActivity.this);
                     } else {

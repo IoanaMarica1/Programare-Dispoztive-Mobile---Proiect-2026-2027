@@ -53,6 +53,8 @@
                 android:name=".ui.preferences.AdventureActivity"
                 android:theme="@style/Theme.Wanderly.Auth" />
 
+        <activity android:name=".ui.adventure.PlanActivity" />
+
 
     </application>
 
