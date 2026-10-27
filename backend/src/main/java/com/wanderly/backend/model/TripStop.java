@@ -1,0 +1,68 @@
+package com.wanderly.backend.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalTime;
+
+@Entity
+@Table(name = "trip_stops")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class TripStop {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "trip_id", nullable = false)
+    @Getter
+    @Setter(AccessLevel.PACKAGE)
+    private Trip trip;
+
+    @Column(name = "day_number", nullable = false)
+    @Getter
+    private Integer dayNumber;
+
+    @Column(nullable = false)
+    @Getter
+    private Integer position;
+
+    @Column(nullable = false, length = 200)
+    @Getter
+    private String name;
+
+    @Column(length = 50)
+    @Getter
+    private String category;
+
+    @Column(nullable = false)
+    @Getter
+    private Double latitude;
+
+    @Column(nullable = false)
+    @Getter
+    private Double longitude;
+
+    @Column(name = "start_time", nullable = false)
+    @Getter
+    private LocalTime startTime;
+
+    @Column(name = "duration_minutes", nullable = false)
+    @Getter
+    private Integer durationMinutes;
+
+    @Builder
+    public TripStop(Integer dayNumber, Integer position, String name, String category,
+                    Double latitude, Double longitude, LocalTime startTime, Integer durationMinutes) {
+        this.dayNumber = dayNumber;
+        this.position = position;
+        this.name = name;
+        this.category = category;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.startTime = startTime;
+        this.durationMinutes = durationMinutes;
+    }
+}
