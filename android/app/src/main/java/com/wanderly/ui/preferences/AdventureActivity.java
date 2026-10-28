@@ -36,11 +36,23 @@ public class AdventureActivity extends AppCompatActivity {
 
         Button datesButton = findViewById(R.id.datesButton);
         datesButton.setOnClickListener(v -> {
+            com.google.android.material.datepicker.CalendarConstraints constraints =
+                    new com.google.android.material.datepicker.CalendarConstraints.Builder()
+                            .setValidator(com.google.android.material.datepicker.DateValidatorPointForward
+                                    .from(MaterialDatePicker.todayInUtcMilliseconds()))
+                            .build();
+
             MaterialDatePicker<Pair<Long, Long>> picker =
                     MaterialDatePicker.Builder.dateRangePicker()
                             .setTitleText("Trip dates")
+                            .setCalendarConstraints(constraints)
                             .build();
             picker.addOnPositiveButtonClickListener(selection -> {
+                long days = (selection.second - selection.first) / 86_400_000L + 1;
+                if (days > 14) {
+                    Toast.makeText(this, "Trips can last at most 14 days", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 startMillis = selection.first;
                 endMillis = selection.second;
                 datesButton.setText(picker.getHeaderText());
@@ -84,34 +96,49 @@ public class AdventureActivity extends AppCompatActivity {
             req.dayStart = String.format(java.util.Locale.US, "%02d:%02d", startHour, startMinute);
             req.dayEnd = String.format(java.util.Locale.US, "%02d:%02d", endHour, endMinute);
 
-            generateButton.setEnabled(false);
-            ApiClient.getService(this).generateTrip(req).enqueue(new Callback<TripResponse>() {
-                @Override
-                public void onResponse(@NonNull Call<TripResponse> call,
-                                       @NonNull Response<TripResponse> response) {
-                    if (isDestroyed()) return;
-                    generateButton.setEnabled(true);
-                    if (response.isSuccessful() && response.body() != null) {
-                        Intent i = new Intent(AdventureActivity.this, PlanActivity.class);
-                        i.putExtra("trip", new com.google.gson.Gson().toJson(response.body()));
-                        startActivity(i);
-                    } else if (response.code() == 401) {
-                        Session.expire(AdventureActivity.this);
-                    } else {
-                        Toast.makeText(AdventureActivity.this,
-                                "Could not generate plan (" + response.code() + ")",
-                                Toast.LENGTH_LONG).show();
-                    }
-                }
-
-                @Override
-                public void onFailure(@NonNull Call<TripResponse> call, @NonNull Throwable t) {
-                    if (isDestroyed()) return;
-                    generateButton.setEnabled(true);
-                    Toast.makeText(AdventureActivity.this,
-                            "Network error", Toast.LENGTH_LONG).show();
-                }
-            });
+            sendRequest(req);
         });
+    }
+
+    private void setLoading(boolean loading) {
+        findViewById(R.id.generateProgress)
+                .setVisibility(loading ? android.view.View.VISIBLE : android.view.View.GONE);
+        findViewById(R.id.generateButton).setEnabled(!loading);
+    }
+
+    private void sendRequest(GenerateTripRequest req) {
+        setLoading(true);
+        ApiClient.getService(this).generateTrip(req).enqueue(new Callback<TripResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<TripResponse> call,
+                                   @NonNull Response<TripResponse> response) {
+                if (isDestroyed()) return;
+                setLoading(false);
+                if (response.isSuccessful() && response.body() != null) {
+                    Intent i = new Intent(AdventureActivity.this, PlanActivity.class);
+                    i.putExtra("trip", new com.google.gson.Gson().toJson(response.body()));
+                    startActivity(i);
+                } else if (response.code() == 401) {
+                    Session.expire(AdventureActivity.this);
+                } else {
+                    showRetry(req, "Could not generate plan (" + response.code() + ")");
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TripResponse> call, @NonNull Throwable t) {
+                if (isDestroyed()) return;
+                setLoading(false);
+                showRetry(req, "Network error");
+            }
+        });
+    }
+
+    private void showRetry(GenerateTripRequest req, String message) {
+        com.google.android.material.snackbar.Snackbar
+                .make(findViewById(R.id.generateButton), message,
+                        com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
+                .setAction("Retry", v -> sendRequest(req))
+                .show();
     }
 }

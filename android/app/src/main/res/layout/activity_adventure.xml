@@ -95,5 +95,13 @@
                 android:layout_marginTop="32dp"
                 android:text="Generate plan" />
 
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/generateProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
     </LinearLayout>
 </ScrollView>
