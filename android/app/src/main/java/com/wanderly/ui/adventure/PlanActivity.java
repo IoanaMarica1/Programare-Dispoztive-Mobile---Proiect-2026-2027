@@ -32,6 +32,7 @@ import org.maplibre.android.style.layers.PropertyFactory;
 import org.maplibre.android.style.layers.SymbolLayer;
 import org.maplibre.android.style.sources.GeoJsonSource;
 import org.maplibre.geojson.Feature;
+import org.json.JSONArray;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -57,6 +58,8 @@ public class PlanActivity extends AppCompatActivity {
     private int selectedDay = 1;
     private final TreeMap<Integer, List<TripResponse.Stop>> byDay = new TreeMap<>();
     private final Map<String, TextView> nameViews = new HashMap<>();
+
+    private final List<TextView> legViews = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,12 +161,20 @@ public class PlanActivity extends AppCompatActivity {
             container.removeViewAt(fixedChildren);
         }
         nameViews.clear();
+        legViews.clear();
 
         List<TripResponse.Stop> stops = byDay.get(day);
         if (stops == null) return;
         container.addView(text("Day " + day, 20, 0xFFFFFFFF, true, 20));
 
-        for (TripResponse.Stop s : stops) {
+        for (int idx = 0; idx < stops.size(); idx++) {
+            TripResponse.Stop s = stops.get(idx);
+            if (idx > 0) {
+                TextView leg = text("", 13, 0xFF86EFAC, false, 10);
+                leg.setVisibility(View.GONE);
+                container.addView(leg);
+                legViews.add(leg);
+            }
             String time = s.startTime != null && s.startTime.length() >= 5
                     ? s.startTime.substring(0, 5) : "";
             TextView nameView = text(s.position + ".  " + s.name, 17, 0xFFFFFFFF, true, 14);
@@ -242,14 +253,29 @@ public class PlanActivity extends AppCompatActivity {
                     String line;
                     while ((line = r.readLine()) != null) sb.append(line);
                 }
-                org.json.JSONObject geometry = new JSONObject(sb.toString())
-                        .getJSONArray("routes").getJSONObject(0).getJSONObject("geometry");
+                JSONObject route = new JSONObject(sb.toString())
+                        .getJSONArray("routes").getJSONObject(0);
                 String feature = "{\"type\":\"Feature\",\"properties\":{},\"geometry\":"
-                        + geometry + "}";
+                        + route.getJSONObject("geometry") + "}";
+                JSONArray legs = route.getJSONArray("legs");
+                List<String> legTexts = new ArrayList<>();
+                for (int i = 0; i < legs.length(); i++) {
+                    double meters = legs.getJSONObject(i).getDouble("distance");
+                    long minutes = Math.max(1, Math.round(
+                            legs.getJSONObject(i).getDouble("duration") / 60.0));
+                    String dist = meters < 1000
+                            ? Math.round(meters) + " m"
+                            : String.format(java.util.Locale.US, "%.1f km", meters / 1000);
+                    legTexts.add("🚶 " + minutes + " min walk  ·  " + dist);
+                }
                 runOnUiThread(() -> {
                     if (isDestroyed() || day != selectedDay || styleRef == null) return;
                     GeoJsonSource src = styleRef.getSourceAs("route");
                     if (src != null) src.setGeoJson(feature);
+                    for (int i = 0; i < legTexts.size() && i < legViews.size(); i++) {
+                        legViews.get(i).setText(legTexts.get(i));
+                        legViews.get(i).setVisibility(View.VISIBLE);
+                    }
                 });
             } catch (Exception ignored) {
                 // Keep the straight line if routing is unavailable.
