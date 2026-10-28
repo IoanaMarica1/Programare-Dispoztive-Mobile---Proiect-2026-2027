@@ -42,11 +42,31 @@ public class TripService {
                 .dayEnd(req.dayEnd())
                 .build();
 
-        // Hardcoded placeholder plan (Rome), replaced by the AI later.
-        trip.addStop(stop(1, 1, "Colosseum", "Historical", 41.8902, 12.4922, LocalTime.of(9, 30), 90));
-        trip.addStop(stop(1, 2, "Roman Forum", "Ruins", 41.8925, 12.4853, LocalTime.of(11, 15), 55));
-        trip.addStop(stop(1, 3, "Piazza Venezia", "Landmark", 41.8960, 12.4823, LocalTime.of(12, 30), 30));
-        trip.addStop(stop(1, 4, "Pantheon", "Historical", 41.8986, 12.4769, LocalTime.of(14, 0), 45));
+        // Placeholder pool of Rome stops: name, category, lat, lon
+        Object[][] pool = {
+                {"Colosseum", "Historical", 41.8902, 12.4922},
+                {"Roman Forum", "Ruins", 41.8925, 12.4853},
+                {"Piazza Venezia", "Landmark", 41.8960, 12.4823},
+                {"Pantheon", "Historical", 41.8986, 12.4769},
+                {"Piazza Navona", "Landmark", 41.8992, 12.4731},
+                {"Trevi Fountain", "Landmark", 41.9009, 12.4833},
+                {"Spanish Steps", "Landmark", 41.9060, 12.4828},
+                {"Trastevere", "Food", 41.8896, 12.4698},
+                {"Vatican Museums", "Art", 41.9065, 12.4536},
+                {"Castel Sant'Angelo", "Historical", 41.9031, 12.4663}
+        };
+
+        long days = java.time.temporal.ChronoUnit.DAYS
+                .between(req.startDate(), req.endDate()) + 1;
+        int stopsPerDay = 5;
+        for (int d = 0; d < days; d++) {
+            for (int p = 0; p < stopsPerDay; p++) {
+                Object[] s = pool[(d * stopsPerDay + p) % pool.length];
+                LocalTime start = LocalTime.of(9, 0).plusMinutes(p * 90L);
+                trip.addStop(stop(d + 1, p + 1, (String) s[0], (String) s[1],
+                        (double) s[2], (double) s[3], start, 60));
+            }
+        }
 
         Trip saved = tripRepository.save(trip);
         return toResponse(saved);

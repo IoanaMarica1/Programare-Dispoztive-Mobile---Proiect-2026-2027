@@ -30,6 +30,7 @@ public class PlanActivity extends AppCompatActivity {
 
     private MapView mapView;
     private org.maplibre.android.maps.MapLibreMap mapRef;
+    private final java.util.Map<String, TextView> nameViews = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +69,7 @@ public class PlanActivity extends AppCompatActivity {
                         if (i > 0) { pts.append(","); coords.append(","); }
                         pts.append("{\"type\":\"Feature\",\"properties\":{\"num\":\"")
                                 .append(s.position)
+                                .append("\",\"key\":\"").append(s.dayNumber).append("-").append(s.position)
                                 .append("\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[")
                                 .append(s.longitude).append(",").append(s.latitude).append("]}}");
                         coords.append("[").append(s.longitude).append(",").append(s.latitude).append("]");
@@ -101,6 +103,19 @@ public class PlanActivity extends AppCompatActivity {
                                     org.maplibre.android.style.layers.PropertyFactory.textFont(
                                             new String[]{"Noto Sans Regular"})));
 
+                    map.addOnMapClickListener(point -> {
+                        android.graphics.PointF px = map.getProjection().toScreenLocation(point);
+                        List<org.maplibre.geojson.Feature> hits =
+                                map.queryRenderedFeatures(px, "stops-circle");
+                        if (hits.isEmpty()) return false;
+                        TextView target = nameViews.get(hits.get(0).getStringProperty("key"));
+                        if (target != null) {
+                            android.widget.ScrollView scroll = (android.widget.ScrollView)
+                                    findViewById(R.id.planContainer).getParent();
+                            scroll.smoothScrollTo(0, Math.max(0, target.getTop() - 40));
+                        }
+                        return true;
+                    });
                     loadWalkingRoute(sorted, style);
                     if (!sorted.isEmpty()) {
                         map.moveCamera(org.maplibre.android.camera.CameraUpdateFactory
@@ -139,6 +154,7 @@ public class PlanActivity extends AppCompatActivity {
                     }
                 });
                 container.addView(nameView);
+                nameViews.put(s.dayNumber + "-" + s.position, nameView);
                 String meta = time + "  ·  " + s.durationMinutes + " min"
                         + (s.category != null ? "  ·  " + s.category : "");
                 container.addView(text(meta, 14, 0xFFB0BEC5, false, 2));
