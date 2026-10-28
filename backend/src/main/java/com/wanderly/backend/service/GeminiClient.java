@@ -41,7 +41,9 @@ public class GeminiClient {
         }
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                "generationConfig", Map.of("responseMimeType", "application/json"));
+                "generationConfig", Map.of(
+                        "responseMimeType", "application/json",
+                        "thinkingConfig", Map.of("thinkingLevel", "LOW")));
 
         RuntimeException last = null;
         for (int attempt = 1; attempt <= 3; attempt++) {

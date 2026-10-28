@@ -1,60 +1,79 @@
 package com.wanderly.backend.service;
 
-import com.wanderly.backend.repository.UserRepository;
-import com.wanderly.backend.model.User;
 import com.wanderly.backend.dto.trip.GenerateTripRequest;
 import com.wanderly.backend.dto.trip.TripResponse;
 import com.wanderly.backend.model.Trip;
 import com.wanderly.backend.model.TripStop;
 import com.wanderly.backend.model.User;
 import com.wanderly.backend.repository.TripRepository;
+import com.wanderly.backend.repository.UserRepository;
+import com.wanderly.backend.service.GeocodingClient.Place;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class TripService {
+
+    private static final Logger log = LoggerFactory.getLogger(TripService.class);
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final PreferencesService preferencesService;
     private final GeminiClient gemini;
+    private final GeocodingClient geocoder;
     private final tools.jackson.databind.json.JsonMapper json =
             tools.jackson.databind.json.JsonMapper.builder().build();
 
     public TripService(TripRepository tripRepository, UserRepository userRepository,
-                       PreferencesService preferencesService, GeminiClient gemini) {
+                       PreferencesService preferencesService, GeminiClient gemini,
+                       GeocodingClient geocoder) {
         this.tripRepository = tripRepository;
         this.userRepository = userRepository;
         this.preferencesService = preferencesService;
         this.gemini = gemini;
+        this.geocoder = geocoder;
     }
 
-    /** Shape we ask Gemini to return. */
-    record AiStop(int day, int position, String name, String category,
-                  double lat, double lon, String start, int durationMinutes) {}
+    /** Gemini only picks places by id and schedules them. */
+    record AiStop(int day, int id, String start, int durationMinutes) {}
     record AiPlan(List<AiStop> stops) {}
+    private record Picked(AiStop ai, Place place, LocalTime start) {}
 
     @Transactional
     public TripResponse generate(String email, GenerateTripRequest req) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
 
-        Trip trip = Trip.builder()
-                .user(user)
-                .destination(req.destination())
-                .country(req.country())
-                .latitude(req.latitude() != null ? req.latitude() : 41.8902)
-                .longitude(req.longitude() != null ? req.longitude() : 12.4922)
-                .startDate(req.startDate())
-                .endDate(req.endDate())
-                .dayStart(req.dayStart())
-                .dayEnd(req.dayEnd())
-                .build();
+        // 1. Real places for this city (cached after the first time).
+        long t0 = System.currentTimeMillis();
+        List<Place> places = geocoder.candidates(req.destination());
+        if (places.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "No places found for " + req.destination());
+        }
+        Map<Integer, Place> byId = places.stream().collect(Collectors.toMap(Place::id, Function.identity()));
+        String list = places.stream()
+                .map(p -> p.id() + ". " + p.name() + " (" + p.category() + ")")
+                .collect(Collectors.joining("\n"));
+        long t1 = System.currentTimeMillis();
 
-        long days = java.time.temporal.ChronoUnit.DAYS.between(req.startDate(), req.endDate()) + 1;
+        long days = ChronoUnit.DAYS.between(req.startDate(), req.endDate()) + 1;
         var prefs = preferencesService.getPreferences(email).orElse(null);
         String interests = prefs == null ? "general sightseeing" : prefs.interests().toString();
         String pace = prefs == null ? "balanced" : prefs.paces().toString();
@@ -64,50 +83,69 @@ public class TripService {
                 You are a travel planner. Plan a %d-day trip to %s.
                 Daily window: %s to %s. Travel mode: %s. Interests: %s. Pace: %s
                 (relaxed = 3 stops/day, balanced = 4-5, packed = 6-7).
+                Choose ONLY from these real places (use their id):
+                %s
                 Rules:
-                - Only real, existing places in %s with accurate latitude/longitude.
-                - Order stops each day so walking between them is short.
-                - Every stop starts and ends inside the daily window, and only when the place is normally open.
-                - No place appears twice in the whole trip.
-                Return ONLY JSON of this exact shape:
-                {"stops":[{"day":1,"position":1,"name":"...","category":"Historical|Museum|Food|Nature|Art|Landmark|Nightlife",
-                "lat":0.0,"lon":0.0,"start":"HH:mm","durationMinutes":60}]}
+                - Prefer places matching the interests; include at most one Food stop per meal time.
+                - Group nearby places on the same day.
+                - Every stop starts and ends inside the daily window, when the place is normally open.
+                - Never use the same id twice.
+                Return ONLY JSON: {"stops":[{"day":1,"id":12,"start":"HH:mm","durationMinutes":60}]}
                 """.formatted(days, req.destination(), req.dayStart(), req.dayEnd(),
-                modes, interests, pace, req.destination());
+                modes, interests, pace, list);
 
+        // 2. Gemini schedules them.
         AiPlan plan;
         try {
             plan = json.readValue(gemini.generateJson(prompt), AiPlan.class);
         } catch (RuntimeException e) {
-            org.slf4j.LoggerFactory.getLogger(TripService.class).error("Plan generation failed", e);
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Plan generation failed", e);
+            log.error("Plan generation failed", e);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Plan generation failed", e);
         }
+        long t2 = System.currentTimeMillis();
 
-        // Keep only sane stops: valid day, inside the window, real coordinates, no duplicates.
-        java.util.Set<String> seen = new java.util.HashSet<>();
-        java.util.Map<Integer, Integer> nextPos = new java.util.HashMap<>();
+        // 3. Validate: known id, used once, inside the day window; then order by day and time.
+        Set<Integer> used = new HashSet<>();
+        List<Picked> picked = new ArrayList<>();
         for (AiStop s : plan.stops() == null ? List.<AiStop>of() : plan.stops()) {
-            if (s.day() < 1 || s.day() > days || s.name() == null || s.durationMinutes() <= 0) continue;
-            if (Math.abs(s.lat()) > 90 || Math.abs(s.lon()) > 180 || !seen.add(s.name().toLowerCase())) continue;
+            Place p = byId.get(s.id());
+            if (p == null || s.day() < 1 || s.day() > days || s.durationMinutes() <= 0 || !used.add(s.id())) continue;
             LocalTime start;
             try { start = LocalTime.parse(s.start()); } catch (Exception e) { continue; }
             if (start.isBefore(req.dayStart())
                     || start.plusMinutes(s.durationMinutes()).isAfter(req.dayEnd())) continue;
-            int pos = nextPos.merge(s.day(), 1, Integer::sum);
-            trip.addStop(stop(s.day(), pos, s.name(), s.category(),
-                    s.lat(), s.lon(), start, s.durationMinutes()));
+            picked.add(new Picked(s, p, start));
+        }
+        picked.sort(Comparator.comparingInt((Picked x) -> x.ai().day()).thenComparing(Picked::start));
+
+        Trip trip = Trip.builder()
+                .user(user)
+                .destination(req.destination())
+                .country(req.country())
+                .latitude(0.0)
+                .longitude(0.0)
+                .startDate(req.startDate())
+                .endDate(req.endDate())
+                .dayStart(req.dayStart())
+                .dayEnd(req.dayEnd())
+                .build();
+
+        Map<Integer, Integer> nextPos = new HashMap<>();
+        for (Picked x : picked) {
+            int pos = nextPos.merge(x.ai().day(), 1, Integer::sum);
+            trip.addStop(stop(x.ai().day(), pos, x.place().name(), x.place().category(),
+                    x.place().lat(), x.place().lon(), x.start(), x.ai().durationMinutes()));
         }
         if (trip.getStops().isEmpty()) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Plan generation returned no usable stops");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Plan generation returned no usable stops");
         }
+        trip.setCenter(
+                trip.getStops().stream().mapToDouble(TripStop::getLatitude).average().orElse(0),
+                trip.getStops().stream().mapToDouble(TripStop::getLongitude).average().orElse(0));
 
-        if (req.latitude() == null || req.longitude() == null) {
-            trip.setCenter(
-                    trip.getStops().stream().mapToDouble(TripStop::getLatitude).average().orElse(0),
-                    trip.getStops().stream().mapToDouble(TripStop::getLongitude).average().orElse(0));
-        }
+        log.info("Plan for {} days: places {} ms ({} candidates), gemini {} ms, {} stops",
+                days, t1 - t0, places.size(), t2 - t1, trip.getStops().size());
 
         Trip saved = tripRepository.save(trip);
         return toResponse(saved);
