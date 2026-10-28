@@ -88,4 +88,9 @@ public class Trip {
         stop.setTrip(this);
         stops.add(stop);
     }
+
+    public void setCenter(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
 }

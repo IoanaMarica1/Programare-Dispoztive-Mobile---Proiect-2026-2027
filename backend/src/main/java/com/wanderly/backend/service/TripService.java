@@ -19,11 +19,23 @@ public class TripService {
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
+    private final PreferencesService preferencesService;
+    private final GeminiClient gemini;
+    private final tools.jackson.databind.json.JsonMapper json =
+            tools.jackson.databind.json.JsonMapper.builder().build();
 
-    public TripService(TripRepository tripRepository, UserRepository userRepository) {
+    public TripService(TripRepository tripRepository, UserRepository userRepository,
+                       PreferencesService preferencesService, GeminiClient gemini) {
         this.tripRepository = tripRepository;
         this.userRepository = userRepository;
+        this.preferencesService = preferencesService;
+        this.gemini = gemini;
     }
+
+    /** Shape we ask Gemini to return. */
+    record AiStop(int day, int position, String name, String category,
+                  double lat, double lon, String start, int durationMinutes) {}
+    record AiPlan(List<AiStop> stops) {}
 
     @Transactional
     public TripResponse generate(String email, GenerateTripRequest req) {
@@ -42,30 +54,59 @@ public class TripService {
                 .dayEnd(req.dayEnd())
                 .build();
 
-        // Placeholder pool of Rome stops: name, category, lat, lon
-        Object[][] pool = {
-                {"Colosseum", "Historical", 41.8902, 12.4922},
-                {"Roman Forum", "Ruins", 41.8925, 12.4853},
-                {"Piazza Venezia", "Landmark", 41.8960, 12.4823},
-                {"Pantheon", "Historical", 41.8986, 12.4769},
-                {"Piazza Navona", "Landmark", 41.8992, 12.4731},
-                {"Trevi Fountain", "Landmark", 41.9009, 12.4833},
-                {"Spanish Steps", "Landmark", 41.9060, 12.4828},
-                {"Trastevere", "Food", 41.8896, 12.4698},
-                {"Vatican Museums", "Art", 41.9065, 12.4536},
-                {"Castel Sant'Angelo", "Historical", 41.9031, 12.4663}
-        };
+        long days = java.time.temporal.ChronoUnit.DAYS.between(req.startDate(), req.endDate()) + 1;
+        var prefs = preferencesService.getPreferences(email).orElse(null);
+        String interests = prefs == null ? "general sightseeing" : prefs.interests().toString();
+        String pace = prefs == null ? "balanced" : prefs.paces().toString();
+        String modes = prefs == null ? "solo" : prefs.travelModes().toString();
 
-        long days = java.time.temporal.ChronoUnit.DAYS
-                .between(req.startDate(), req.endDate()) + 1;
-        int stopsPerDay = 5;
-        for (int d = 0; d < days; d++) {
-            for (int p = 0; p < stopsPerDay; p++) {
-                Object[] s = pool[(d * stopsPerDay + p) % pool.length];
-                LocalTime start = LocalTime.of(9, 0).plusMinutes(p * 90L);
-                trip.addStop(stop(d + 1, p + 1, (String) s[0], (String) s[1],
-                        (double) s[2], (double) s[3], start, 60));
-            }
+        String prompt = """
+                You are a travel planner. Plan a %d-day trip to %s.
+                Daily window: %s to %s. Travel mode: %s. Interests: %s. Pace: %s
+                (relaxed = 3 stops/day, balanced = 4-5, packed = 6-7).
+                Rules:
+                - Only real, existing places in %s with accurate latitude/longitude.
+                - Order stops each day so walking between them is short.
+                - Every stop starts and ends inside the daily window, and only when the place is normally open.
+                - No place appears twice in the whole trip.
+                Return ONLY JSON of this exact shape:
+                {"stops":[{"day":1,"position":1,"name":"...","category":"Historical|Museum|Food|Nature|Art|Landmark|Nightlife",
+                "lat":0.0,"lon":0.0,"start":"HH:mm","durationMinutes":60}]}
+                """.formatted(days, req.destination(), req.dayStart(), req.dayEnd(),
+                modes, interests, pace, req.destination());
+
+        AiPlan plan;
+        try {
+            plan = json.readValue(gemini.generateJson(prompt), AiPlan.class);
+        } catch (RuntimeException e) {
+            org.slf4j.LoggerFactory.getLogger(TripService.class).error("Plan generation failed", e);
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Plan generation failed", e);
+        }
+
+        // Keep only sane stops: valid day, inside the window, real coordinates, no duplicates.
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.Map<Integer, Integer> nextPos = new java.util.HashMap<>();
+        for (AiStop s : plan.stops() == null ? List.<AiStop>of() : plan.stops()) {
+            if (s.day() < 1 || s.day() > days || s.name() == null || s.durationMinutes() <= 0) continue;
+            if (Math.abs(s.lat()) > 90 || Math.abs(s.lon()) > 180 || !seen.add(s.name().toLowerCase())) continue;
+            LocalTime start;
+            try { start = LocalTime.parse(s.start()); } catch (Exception e) { continue; }
+            if (start.isBefore(req.dayStart())
+                    || start.plusMinutes(s.durationMinutes()).isAfter(req.dayEnd())) continue;
+            int pos = nextPos.merge(s.day(), 1, Integer::sum);
+            trip.addStop(stop(s.day(), pos, s.name(), s.category(),
+                    s.lat(), s.lon(), start, s.durationMinutes()));
+        }
+        if (trip.getStops().isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Plan generation returned no usable stops");
+        }
+
+        if (req.latitude() == null || req.longitude() == null) {
+            trip.setCenter(
+                    trip.getStops().stream().mapToDouble(TripStop::getLatitude).average().orElse(0),
+                    trip.getStops().stream().mapToDouble(TripStop::getLongitude).average().orElse(0));
         }
 
         Trip saved = tripRepository.save(trip);
