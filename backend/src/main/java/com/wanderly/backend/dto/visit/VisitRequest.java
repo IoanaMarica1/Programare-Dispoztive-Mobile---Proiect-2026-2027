@@ -16,6 +16,8 @@ public record VisitRequest(
         @Size(max = 100, message = "Country must not contain more than 100 characters.")
         String country,
 
+        // Where the traveler is now (GPS). The server finds the objective on the map and
+        // accepts the check-in only within VisitService.MAX_CHECK_IN_METERS of it.
         @NotNull(message = "Latitude is required.")
         @DecimalMin(value = "-90.0", message = "Latitude must be between -90 and 90.")
         @DecimalMax(value = "90.0", message = "Latitude must be between -90 and 90.")

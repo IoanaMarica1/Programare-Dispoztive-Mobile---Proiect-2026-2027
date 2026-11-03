@@ -16,6 +16,7 @@ import androidx.core.util.Pair;
 
 import androidx.annotation.NonNull;
 import com.wanderly.data.remote.ApiClient;
+import com.wanderly.data.remote.dto.ErrorResponse;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
 import com.wanderly.data.remote.dto.TripResponse;
 import com.wanderly.ui.adventure.PlanActivity;
@@ -28,6 +29,18 @@ public class AdventureActivity extends AppCompatActivity {
 
     private Long startMillis, endMillis;
     private int startHour = 9, startMinute = 0, endHour = 18, endMinute = 0;
+
+    /** An autocomplete suggestion: city name, country and centre, sent along so the backend skips a lookup. */
+    private static final class City {
+        final String name, country;
+        final double latitude, longitude;
+        City(String name, String country, double latitude, double longitude) {
+            this.name = name; this.country = country; this.latitude = latitude; this.longitude = longitude;
+        }
+    }
+
+    // Label shown in the dropdown ("Paris, France") -> the suggestion behind it.
+    private final java.util.Map<String, City> suggestions = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +103,13 @@ public class AdventureActivity extends AppCompatActivity {
 
             GenerateTripRequest req = new GenerateTripRequest();
             req.destination = destination;
+            City city = suggestions.get(destination);
+            if (city != null) {
+                req.destination = city.name;
+                req.country = city.country;
+                req.latitude = city.latitude;
+                req.longitude = city.longitude;
+            }
             req.startDate = java.time.Instant.ofEpochMilli(startMillis)
                     .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString();
             req.endDate = java.time.Instant.ofEpochMilli(endMillis)
@@ -122,7 +142,13 @@ public class AdventureActivity extends AppCompatActivity {
                 } else if (response.code() == 401) {
                     Session.expire(AdventureActivity.this);
                 } else {
-                    showRetry(req, "Could not generate plan (" + response.code() + ")");
+                    String message = errorMessage(ApiClient.parseError(response), response.code());
+                    // A 4xx (bad dates, too long...) fails the same way again; only offer Retry otherwise.
+                    if (response.code() >= 500 || response.code() == 429) {
+                        showRetry(req, message);
+                    } else {
+                        showError(message);
+                    }
                 }
             }
 
@@ -140,7 +166,27 @@ public class AdventureActivity extends AppCompatActivity {
                 .make(findViewById(R.id.generateButton), message,
                         com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
                 .setAction("Retry", v -> sendRequest(req))
+                .setTextMaxLines(4)
                 .show();
+    }
+
+    private void showError(String message) {
+        com.google.android.material.snackbar.Snackbar
+                .make(findViewById(R.id.generateButton), message,
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                .setTextMaxLines(4)
+                .show();
+    }
+
+    /** The backend's own explanation: field errors first (e.g. "Trips can last at most 14 days."), then its message. */
+    static String errorMessage(ErrorResponse error, int code) {
+        if (error != null && error.errors != null && !error.errors.isEmpty()) {
+            return android.text.TextUtils.join("\n", error.errors.values());
+        }
+        if (error != null && error.message != null && !error.message.isEmpty()) {
+            return error.message;
+        }
+        return "Could not generate plan (" + code + ")";
     }
 
     // --- B2: destination autocomplete (Open-Meteo geocoding, free, no key) ---
@@ -185,17 +231,23 @@ public class AdventureActivity extends AppCompatActivity {
                 if (!resp.isSuccessful() || resp.body() == null) return;
                 com.google.gson.JsonObject root = com.google.gson.JsonParser
                         .parseString(resp.body().string()).getAsJsonObject();
-                java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
+                java.util.LinkedHashMap<String, City> found = new java.util.LinkedHashMap<>();
                 if (root.has("results")) {
                     for (com.google.gson.JsonElement el : root.getAsJsonArray("results")) {
                         com.google.gson.JsonObject o = el.getAsJsonObject();
                         String name = o.get("name").getAsString();
                         String country = o.has("country") ? o.get("country").getAsString() : null;
-                        names.add(country == null ? name : name + ", " + country);
+                        String label = country == null ? name : name + ", " + country;
+                        if (o.has("latitude") && o.has("longitude") && !found.containsKey(label)) {
+                            found.put(label, new City(name, country,
+                                    o.get("latitude").getAsDouble(), o.get("longitude").getAsDouble()));
+                        }
                     }
                 }
+                java.util.Set<String> names = found.keySet();
                 runOnUiThread(() -> {
                     if (isDestroyed() || !q.equals(input.getText().toString().trim())) return;
+                    suggestions.putAll(found);
                     adapter.clear();
                     adapter.addAll(names);
                     adapter.notifyDataSetChanged();
