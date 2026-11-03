@@ -51,7 +51,7 @@ public class TripService {
     }
 
     /** Gemini only picks places by id and schedules them. */
-    record AiStop(int day, int id, String start, int durationMinutes) {}
+    record AiStop(int day, int id, String start, int durationMinutes, String description) {}
     record AiPlan(List<AiStop> stops) {}
     private record Picked(AiStop ai, Place place, LocalTime start) {}
 
@@ -69,7 +69,8 @@ public class TripService {
         }
         Map<Integer, Place> byId = places.stream().collect(Collectors.toMap(Place::id, Function.identity()));
         String list = places.stream()
-                .map(p -> p.id() + ". " + p.name() + " (" + p.category() + ")")
+                .map(p -> p.id() + ". " + p.name() + " (" + p.category() + ")"
+                        + (p.openingHours() != null ? " [open: " + p.openingHours() + "]" : ""))
                 .collect(Collectors.joining("\n"));
         long t1 = System.currentTimeMillis();
 
@@ -88,9 +89,11 @@ public class TripService {
                 Rules:
                 - Prefer places matching the interests; include at most one Food stop per meal time.
                 - Group nearby places on the same day.
-                - Every stop starts and ends inside the daily window, when the place is normally open.
+                - Every stop starts and ends inside the daily window, when the place is open
+                  (respect the [open: ...] hours when given, OSM format).
                 - Never use the same id twice.
-                Return ONLY JSON: {"stops":[{"day":1,"id":12,"start":"HH:mm","durationMinutes":60}]}
+                - "description": one short sentence (max 120 characters) on why it's worth visiting.
+                Return ONLY JSON: {"stops":[{"day":1,"id":12,"start":"HH:mm","durationMinutes":60,"description":"..."}]}
                 """.formatted(days, req.destination(), req.dayStart(), req.dayEnd(),
                 modes, interests, pace, list);
 
@@ -134,7 +137,8 @@ public class TripService {
         for (Picked x : picked) {
             int pos = nextPos.merge(x.ai().day(), 1, Integer::sum);
             trip.addStop(stop(x.ai().day(), pos, x.place().name(), x.place().category(),
-                    x.place().lat(), x.place().lon(), x.start(), x.ai().durationMinutes()));
+                    x.place().lat(), x.place().lon(), x.start(), x.ai().durationMinutes(),
+                    shorten(x.ai().description()), x.place().openingHours()));
         }
         if (trip.getStops().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -152,18 +156,27 @@ public class TripService {
     }
 
     private TripStop stop(int day, int pos, String name, String category,
-                          double lat, double lon, LocalTime start, int minutes) {
+                          double lat, double lon, LocalTime start, int minutes,
+                          String description, String openingHours) {
         return TripStop.builder()
                 .dayNumber(day).position(pos).name(name).category(category)
                 .latitude(lat).longitude(lon).startTime(start).durationMinutes(minutes)
+                .description(description).openingHours(openingHours)
                 .build();
+    }
+
+    private static String shorten(String s) {
+        if (s == null || s.isBlank()) return null;
+        s = s.trim();
+        return s.length() > 300 ? s.substring(0, 297) + "..." : s;
     }
 
     private TripResponse toResponse(Trip t) {
         List<TripResponse.StopResponse> stops = t.getStops().stream()
                 .map(s -> new TripResponse.StopResponse(
                         s.getDayNumber(), s.getPosition(), s.getName(), s.getCategory(),
-                        s.getLatitude(), s.getLongitude(), s.getStartTime(), s.getDurationMinutes()))
+                        s.getLatitude(), s.getLongitude(), s.getStartTime(), s.getDurationMinutes(),
+                        s.getDescription(), s.getOpeningHours()))
                 .toList();
         return new TripResponse(t.getPublicId(), t.getDestination(), t.getCountry(),
                 t.getLatitude(), t.getLongitude(), t.getStartDate(), t.getEndDate(),

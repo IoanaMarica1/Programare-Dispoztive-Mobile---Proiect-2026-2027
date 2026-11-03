@@ -53,9 +53,18 @@ public class TripStop {
     @Getter
     private Integer durationMinutes;
 
+    @Column(length = 300)
+    @Getter
+    private String description;
+
+    @Column(name = "opening_hours", length = 255)
+    @Getter
+    private String openingHours;
+
     @Builder
     public TripStop(Integer dayNumber, Integer position, String name, String category,
-                    Double latitude, Double longitude, LocalTime startTime, Integer durationMinutes) {
+                    Double latitude, Double longitude, LocalTime startTime, Integer durationMinutes,
+                    String description, String openingHours) {
         this.dayNumber = dayNumber;
         this.position = position;
         this.name = name;
@@ -64,5 +73,7 @@ public class TripStop {
         this.longitude = longitude;
         this.startTime = startTime;
         this.durationMinutes = durationMinutes;
+        this.description = description;
+        this.openingHours = openingHours;
     }
 }

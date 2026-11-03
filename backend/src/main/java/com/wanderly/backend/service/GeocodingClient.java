@@ -16,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class GeocodingClient {
 
-    public record Place(int id, String name, String category, double lat, double lon) {}
+    /** openingHours is the raw OSM opening_hours tag (e.g. "Tu-Su 10:00-18:00"), or null. */
+    public record Place(int id, String name, String category, double lat, double lon, String openingHours) {}
 
     // What we search for in each city, and the category we show for it.
     private static final String[][] SEARCHES = {
@@ -60,7 +61,8 @@ public class GeocodingClient {
                 if (name == null || name.isBlank() || !seen.add(name.toLowerCase())) continue;
                 places.add(new Place(places.size() + 1, name, s[1],
                         Double.parseDouble((String) r.get("lat")),
-                        Double.parseDouble((String) r.get("lon"))));
+                        Double.parseDouble((String) r.get("lon")),
+                        openingHours(r)));
             }
         }
         if (!places.isEmpty()) cache.put(key, places);
@@ -75,6 +77,7 @@ public class GeocodingClient {
                     .uri(b -> {
                         b.path("/search").queryParam("q", q)
                                 .queryParam("format", "json")
+                                .queryParam("extratags", 1)
                                 .queryParam("limit", box == null ? 1 : 30);
                         if (box != null) b.queryParam("viewbox", box).queryParam("bounded", 1);
                         return b.build();
@@ -85,6 +88,14 @@ public class GeocodingClient {
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String openingHours(Map<String, Object> r) {
+        if (!(r.get("extratags") instanceof Map<?, ?> tags)) return null;
+        Object oh = ((Map<String, Object>) tags).get("opening_hours");
+        if (!(oh instanceof String s) || s.isBlank()) return null;
+        return s.length() > 255 ? s.substring(0, 255) : s;
     }
 
     /** Nominatim's usage policy: at most one request per second. */

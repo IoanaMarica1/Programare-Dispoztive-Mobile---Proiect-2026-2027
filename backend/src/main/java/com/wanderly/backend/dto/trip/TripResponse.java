@@ -25,6 +25,8 @@ public record TripResponse(
             double latitude,
             double longitude,
             LocalTime startTime,
-            int durationMinutes
+            int durationMinutes,
+            String description,
+            String openingHours
     ) {}
 }
