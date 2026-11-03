@@ -29,7 +29,6 @@ public class VisitService {
     /** A check-in only counts within this distance of the objective (brief: anti-abuse). */
     public static final int MAX_CHECK_IN_METERS = 150;
     private static final Duration LOOKUP_BUDGET = Duration.ofSeconds(10);
-    private static final double EARTH_RADIUS_METERS = 6_371_000;
 
     private final VisitRepository visitRepository;
     private final UserService userService;
@@ -110,14 +109,8 @@ public class VisitService {
                 this::toResponse);
     }
 
-    /** Great-circle (haversine) distance; plenty accurate at check-in scale. */
     static double distanceMeters(double lat1, double lon1, double lat2, double lon2) {
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(a)));
+        return Geo.distanceMeters(lat1, lon1, lat2, lon2);
     }
 
     private Optional<Visit> findVisit(User user, String objectiveName, String city, String country) {

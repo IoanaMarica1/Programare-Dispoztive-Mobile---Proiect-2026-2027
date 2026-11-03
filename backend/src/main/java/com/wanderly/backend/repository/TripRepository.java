@@ -1,13 +1,16 @@
 package com.wanderly.backend.repository;
 
 import com.wanderly.backend.model.Trip;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
-    Optional<Trip> findByPublicId(UUID publicId);
-    List<Trip> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    // Only the owner's trips; another traveler's id looks like a missing trip. Stops come along,
+    // so callers can use them outside a transaction.
+    @EntityGraph(attributePaths = "stops")
+    Optional<Trip> findByPublicIdAndUserEmail(UUID publicId, String email);
 }

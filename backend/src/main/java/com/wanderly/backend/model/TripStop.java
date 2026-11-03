@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "trip_stops")
@@ -15,6 +16,11 @@ public class TripStop {
     @Getter
     private Long id;
 
+    // Exposed to the app instead of the internal database id (swap / remove a stop).
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    @Getter
+    private UUID publicId = UUID.randomUUID();
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "trip_id", nullable = false)
     @Getter
@@ -25,8 +31,10 @@ public class TripStop {
     @Getter
     private Integer dayNumber;
 
+    // Position and start time change whenever the day is re-planned.
     @Column(nullable = false)
     @Getter
+    @Setter
     private Integer position;
 
     @Column(nullable = false, length = 200)
@@ -47,6 +55,7 @@ public class TripStop {
 
     @Column(name = "start_time", nullable = false)
     @Getter
+    @Setter
     private LocalTime startTime;
 
     @Column(name = "duration_minutes", nullable = false)

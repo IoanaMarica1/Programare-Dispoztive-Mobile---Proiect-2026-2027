@@ -18,6 +18,7 @@ public record TripResponse(
         List<StopResponse> stops
 ) {
     public record StopResponse(
+            UUID id,
             int dayNumber,
             int position,
             String name,
