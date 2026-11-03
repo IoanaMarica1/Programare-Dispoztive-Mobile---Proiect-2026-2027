@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Itinerary on top, map below; drag the handle between them to resize, or show the map full screen. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/planRoot"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:orientation="vertical">
 
     <ScrollView
+            android:id="@+id/planScroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
@@ -34,9 +37,49 @@
         </LinearLayout>
     </ScrollView>
 
-    <org.maplibre.android.maps.MapView
-            android:id="@+id/mapView"
+    <!-- 44dp tall so it is easy to grab; the visible bar is the small pill in the middle. -->
+    <FrameLayout
+            android:id="@+id/dividerHandle"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:background="#1E293B"
+            android:contentDescription="Drag to resize the list and the map">
+
+        <View
+                android:layout_width="48dp"
+                android:layout_height="5dp"
+                android:layout_gravity="center"
+                android:background="#94A3B8" />
+    </FrameLayout>
+
+    <FrameLayout
+            android:id="@+id/mapFrame"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1" />
+            android:layout_weight="1">
+
+        <org.maplibre.android.maps.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/fullScreenButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_margin="12dp"
+                android:minHeight="44dp"
+                android:text="Full map" />
+
+        <TextView
+                android:id="@+id/mapError"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="16dp"
+                android:text="The map could not be loaded. Check your connection."
+                android:textColor="#B0BEC5"
+                android:visibility="gone" />
+    </FrameLayout>
 </LinearLayout>

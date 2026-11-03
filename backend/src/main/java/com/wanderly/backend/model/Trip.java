@@ -89,6 +89,11 @@ public class Trip {
         stops.add(stop);
     }
 
+    // orphanRemoval deletes the row.
+    public void removeStop(TripStop stop) {
+        stops.remove(stop);
+    }
+
     public void setCenter(double latitude, double longitude) {
         this.latitude = latitude;
         this.longitude = longitude;

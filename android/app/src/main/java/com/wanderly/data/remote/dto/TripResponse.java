@@ -15,6 +15,7 @@ public class TripResponse {
     public List<Stop> stops;
 
     public static class Stop {
+        public String id;
         public int dayNumber;
         public int position;
         public String name;

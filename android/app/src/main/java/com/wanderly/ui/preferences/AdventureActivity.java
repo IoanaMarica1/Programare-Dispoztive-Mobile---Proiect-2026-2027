@@ -16,14 +16,9 @@ import androidx.core.util.Pair;
 
 import androidx.annotation.NonNull;
 import com.wanderly.data.remote.ApiClient;
-import com.wanderly.data.remote.dto.ErrorResponse;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
-import com.wanderly.data.remote.dto.TripResponse;
 import com.wanderly.ui.adventure.PlanActivity;
 import com.wanderly.ui.common.Session;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class AdventureActivity extends AppCompatActivity {
 
@@ -41,11 +36,39 @@ public class AdventureActivity extends AppCompatActivity {
 
     // Label shown in the dropdown ("Paris, France") -> the suggestion behind it.
     private final java.util.Map<String, City> suggestions = new java.util.HashMap<>();
+    private GenerateTripViewModel viewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_adventure);
+        if (savedInstanceState != null) {  // keep the chosen dates and hours across a rotation
+            if (savedInstanceState.containsKey("startMillis")) {
+                startMillis = savedInstanceState.getLong("startMillis");
+                endMillis = savedInstanceState.getLong("endMillis");
+            }
+            startHour = savedInstanceState.getInt("startHour", startHour);
+            endHour = savedInstanceState.getInt("endHour", endHour);
+        }
+
+        // The plan request lives in the ViewModel, so rotating the phone while it runs loses nothing.
+        viewModel = new androidx.lifecycle.ViewModelProvider(this).get(GenerateTripViewModel.class);
+        viewModel.loading().observe(this, this::setLoading);
+        viewModel.outcome().observe(this, outcome -> {
+            if (outcome == null || !outcome.consume()) return;
+            if (outcome.trip != null) {
+                Intent i = new Intent(AdventureActivity.this, PlanActivity.class);
+                i.putExtra("trip", new com.google.gson.Gson().toJson(outcome.trip));
+                startActivity(i);
+            } else if (outcome.code == 401) {
+                Session.expire(AdventureActivity.this);
+            } else if (outcome.code == 0 || outcome.code >= 500 || outcome.code == 429) {
+                showRetry(outcome.request, outcome.message);
+            } else {
+                // A 4xx (bad dates, too long...) fails the same way again, so no Retry.
+                showError(outcome.message);
+            }
+        });
 
         Button datesButton = findViewById(R.id.datesButton);
         datesButton.setOnClickListener(v -> {
@@ -128,37 +151,18 @@ public class AdventureActivity extends AppCompatActivity {
     }
 
     private void sendRequest(GenerateTripRequest req) {
-        setLoading(true);
-        ApiClient.getService(this).generateTrip(req).enqueue(new Callback<TripResponse>() {
-            @Override
-            public void onResponse(@NonNull Call<TripResponse> call,
-                                   @NonNull Response<TripResponse> response) {
-                if (isDestroyed()) return;
-                setLoading(false);
-                if (response.isSuccessful() && response.body() != null) {
-                    Intent i = new Intent(AdventureActivity.this, PlanActivity.class);
-                    i.putExtra("trip", new com.google.gson.Gson().toJson(response.body()));
-                    startActivity(i);
-                } else if (response.code() == 401) {
-                    Session.expire(AdventureActivity.this);
-                } else {
-                    String message = errorMessage(ApiClient.parseError(response), response.code());
-                    // A 4xx (bad dates, too long...) fails the same way again; only offer Retry otherwise.
-                    if (response.code() >= 500 || response.code() == 429) {
-                        showRetry(req, message);
-                    } else {
-                        showError(message);
-                    }
-                }
-            }
+        viewModel.generate(ApiClient.getService(getApplicationContext()), req);
+    }
 
-            @Override
-            public void onFailure(@NonNull Call<TripResponse> call, @NonNull Throwable t) {
-                if (isDestroyed()) return;
-                setLoading(false);
-                showRetry(req, "Network error");
-            }
-        });
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (startMillis != null && endMillis != null) {
+            outState.putLong("startMillis", startMillis);
+            outState.putLong("endMillis", endMillis);
+        }
+        outState.putInt("startHour", startHour);
+        outState.putInt("endHour", endHour);
     }
 
     private void showRetry(GenerateTripRequest req, String message) {
@@ -176,17 +180,6 @@ public class AdventureActivity extends AppCompatActivity {
                         com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
                 .setTextMaxLines(4)
                 .show();
-    }
-
-    /** The backend's own explanation: field errors first (e.g. "Trips can last at most 14 days."), then its message. */
-    static String errorMessage(ErrorResponse error, int code) {
-        if (error != null && error.errors != null && !error.errors.isEmpty()) {
-            return android.text.TextUtils.join("\n", error.errors.values());
-        }
-        if (error != null && error.message != null && !error.message.isEmpty()) {
-            return error.message;
-        }
-        return "Could not generate plan (" + code + ")";
     }
 
     // --- B2: destination autocomplete (Open-Meteo geocoding, free, no key) ---

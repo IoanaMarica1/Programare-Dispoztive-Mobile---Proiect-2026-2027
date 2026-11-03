@@ -68,6 +68,21 @@ public final class ApiClient {
         return BASE_URL + (path.startsWith("/") ? path.substring(1) : path);
     }
 
+    /**
+     * The backend's own explanation of a failed call: its field errors (e.g. "Trips can last at most
+     * 14 days."), else its message, else {@code fallback}.
+     */
+    public static String errorMessage(Response<?> response, String fallback) {
+        ErrorResponse error = parseError(response);
+        if (error != null && error.errors != null && !error.errors.isEmpty()) {
+            return android.text.TextUtils.join("\n", error.errors.values());
+        }
+        if (error != null && error.message != null && !error.message.isEmpty()) {
+            return error.message;
+        }
+        return fallback;
+    }
+
     public static ErrorResponse parseError(Response<?> response) {
         try (ResponseBody body = response.errorBody()) {
             if (body != null) {
