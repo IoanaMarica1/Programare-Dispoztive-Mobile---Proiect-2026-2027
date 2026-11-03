@@ -10,7 +10,7 @@ import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
 import java.util.Locale;
 import android.widget.Toast;
-import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import androidx.core.util.Pair;
 
@@ -71,7 +71,8 @@ public class AdventureActivity extends AppCompatActivity {
             endMinute = 0;
         });
 
-        TextInputEditText destinationInput = findViewById(R.id.destinationInput);
+        MaterialAutoCompleteTextView destinationInput = findViewById(R.id.destinationInput);
+        setupAutocomplete(destinationInput);
         Button generateButton = findViewById(R.id.generateButton);
 
         generateButton.setOnClickListener(v -> {
@@ -141,4 +142,67 @@ public class AdventureActivity extends AppCompatActivity {
                 .setAction("Retry", v -> sendRequest(req))
                 .show();
     }
+
+    // --- B2: destination autocomplete (Open-Meteo geocoding, free, no key) ---
+    private final android.os.Handler debounce = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final okhttp3.OkHttpClient geoClient = new okhttp3.OkHttpClient();
+    private Runnable pendingSearch;
+    private boolean suppressSearch;
+
+    private void setupAutocomplete(MaterialAutoCompleteTextView input) {
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, new java.util.ArrayList<>());
+        input.setAdapter(adapter);
+        input.setOnItemClickListener((parent, view, pos, id) -> suppressSearch = true);
+
+        input.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            public void afterTextChanged(android.text.Editable s) {
+                if (suppressSearch) { suppressSearch = false; return; }
+                if (pendingSearch != null) debounce.removeCallbacks(pendingSearch);
+                String q = s.toString().trim();
+                if (q.length() < 2) return;
+                pendingSearch = () -> searchCities(q, input, adapter);
+                debounce.postDelayed(pendingSearch, 300);
+            }
+        });
+    }
+
+    private void searchCities(String q, MaterialAutoCompleteTextView input,
+                              android.widget.ArrayAdapter<String> adapter) {
+        okhttp3.HttpUrl url = okhttp3.HttpUrl.parse("https://geocoding-api.open-meteo.com/v1/search")
+                .newBuilder()
+                .addQueryParameter("name", q)
+                .addQueryParameter("count", "8")
+                .addQueryParameter("language", "en")
+                .build();
+        geoClient.newCall(new okhttp3.Request.Builder().url(url).build()).enqueue(new okhttp3.Callback() {
+            @Override public void onFailure(@NonNull okhttp3.Call call, @NonNull java.io.IOException e) {}
+
+            @Override public void onResponse(@NonNull okhttp3.Call call, @NonNull okhttp3.Response resp)
+                    throws java.io.IOException {
+                if (!resp.isSuccessful() || resp.body() == null) return;
+                com.google.gson.JsonObject root = com.google.gson.JsonParser
+                        .parseString(resp.body().string()).getAsJsonObject();
+                java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
+                if (root.has("results")) {
+                    for (com.google.gson.JsonElement el : root.getAsJsonArray("results")) {
+                        com.google.gson.JsonObject o = el.getAsJsonObject();
+                        String name = o.get("name").getAsString();
+                        String country = o.has("country") ? o.get("country").getAsString() : null;
+                        names.add(country == null ? name : name + ", " + country);
+                    }
+                }
+                runOnUiThread(() -> {
+                    if (isDestroyed() || !q.equals(input.getText().toString().trim())) return;
+                    adapter.clear();
+                    adapter.addAll(names);
+                    adapter.notifyDataSetChanged();
+                    if (!names.isEmpty() && input.hasFocus()) input.showDropDown();
+                });
+            }
+        });
+    }
+
 }

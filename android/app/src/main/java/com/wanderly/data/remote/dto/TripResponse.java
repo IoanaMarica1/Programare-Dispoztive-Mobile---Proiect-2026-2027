@@ -23,5 +23,7 @@ public class TripResponse {
         public double longitude;
         public String startTime;
         public int durationMinutes;
+        public String description;
+        public String openingHours;
     }
 }

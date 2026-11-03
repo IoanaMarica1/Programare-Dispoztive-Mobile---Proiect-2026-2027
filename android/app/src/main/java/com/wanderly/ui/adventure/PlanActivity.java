@@ -189,6 +189,12 @@ public class PlanActivity extends AppCompatActivity {
             String meta = time + "  ·  " + s.durationMinutes + " min"
                     + (s.category != null ? "  ·  " + s.category : "");
             container.addView(text(meta, 14, 0xFFB0BEC5, false, 2));
+            if (s.description != null && !s.description.isEmpty()) {
+                container.addView(text(s.description, 14, 0xFFE2E8F0, false, 4));
+            }
+            if (s.openingHours != null && !s.openingHours.isEmpty()) {
+                container.addView(text("Open: " + s.openingHours, 13, 0xFF7DD3FC, false, 2));
+            }
         }
         if (styleRef != null) updateMap(day);
     }
