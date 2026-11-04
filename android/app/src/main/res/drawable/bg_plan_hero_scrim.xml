@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stronger than bg_photo_scrim: on this short card the text covers most of the photo -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="90"
+        android:startColor="#CC062A33"
+        android:centerColor="#73062A33"
+        android:endColor="#1A062A33" />
+</shape>

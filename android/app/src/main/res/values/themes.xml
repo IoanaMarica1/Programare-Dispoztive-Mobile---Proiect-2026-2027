@@ -8,6 +8,8 @@
         <item name="colorOnSecondary">@color/white</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorSurface">@color/surface_card</item>
+        <!-- Dialog background; the Material default is a light purple -->
+        <item name="colorSurfaceContainerHigh">@color/surface_card</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
         <!-- Dark status bar icons on the light screens (profile, home, visits) -->

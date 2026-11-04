@@ -357,6 +357,72 @@
             </FrameLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Planuri salvate -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xl"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/profile_adventures_title"
+                android:textAppearance="@style/TextAppearance.Wanderly.Section" />
+
+            <TextView
+                android:id="@+id/newAdventureLink"
+                style="@style/Widget.Wanderly.Link"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_adventures_new" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_s"
+            app:cardBackgroundColor="@color/surface_card"
+            app:cardCornerRadius="@dimen/radius_card_small"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/outline_soft"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/adventuresList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:divider="@drawable/divider_soft"
+                    android:orientation="vertical"
+                    android:showDividers="middle" />
+
+                <TextView
+                    android:id="@+id/adventuresEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_l"
+                    android:text="@string/profile_adventures_empty"
+                    android:textAppearance="@style/TextAppearance.Wanderly.Body"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/showMoreAdventuresButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_show_more"
+                    android:textColor="@color/text_link"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Istoric: țări vizitate -->
         <TextView
             android:layout_width="wrap_content"

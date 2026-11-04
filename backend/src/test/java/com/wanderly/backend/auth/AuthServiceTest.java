@@ -50,6 +50,35 @@ class AuthServiceTest {
 
 
     @Test
+    @DisplayName("Email cu majuscule și spații: register și login folosesc aceeași formă, cu litere mici")
+    void emailIsNormalized() {
+        when(userRepository.existsByEmail("ana@test.com")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.register(new RegisterRequest(" Ana@Test.COM ", "parola123", "Ana", "Cluj", 26));
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getEmail()).isEqualTo("ana@test.com");
+
+        when(userRepository.findByEmail("ana@test.com")).thenReturn(Optional.of(saved.getValue()));
+        AuthenticationResponse response = authService.login(new LoginRequest("ANA@test.com", "parola123"));
+        assertThat(jwtService.parseToken(response.token()).getSubject()).isEqualTo("ana@test.com");
+    }
+
+    @Test
+    @DisplayName("Login cu parolă de peste 72 de bytes → 401, nu 500 din BCrypt")
+    void login_passwordOver72Bytes_isUnauthorized() {
+        User user = User.builder().email("ana@test.com").passwordHash(passwordEncoder.encode("parola123"))
+                .name("Ana").address("Cluj").age(26).build();
+        when(userRepository.findByEmail("ana@test.com")).thenReturn(Optional.of(user));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> authService.login(new LoginRequest("ana@test.com", "ă".repeat(40) + "1a")));
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     @DisplayName("Register: salvează userul cu parola criptată și returnează token")
     void register_newEmail_savesUserAndReturnsToken() {
         when(userRepository.existsByEmail("ana@test.com")).thenReturn(false);

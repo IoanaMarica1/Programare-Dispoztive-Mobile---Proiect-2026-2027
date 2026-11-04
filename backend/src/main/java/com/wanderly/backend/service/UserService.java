@@ -22,6 +22,13 @@ public class UserService {
                         HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    /** Like getByEmail, but locks the row until the transaction ends, so concurrent point updates queue. */
+    public User getByEmailForUpdate(String email) {
+        return userRepository.findByEmailForUpdate(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+    }
+
     @Transactional(readOnly = true)
     public UserResponse getProfile(String email) {
         return toResponse(getByEmail(email));
