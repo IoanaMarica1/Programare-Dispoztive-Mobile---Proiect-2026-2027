@@ -12,6 +12,7 @@ public class TripResponse {
     public String endDate;
     public String dayStart;
     public String dayEnd;
+    public boolean saved;      // false: a draft that disappears unless the traveler saves it
     public List<Stop> stops;
 
     public static class Stop {

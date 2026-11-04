@@ -9,4 +9,5 @@ public class GenerateTripRequest {
     public String endDate;
     public String dayStart;    // "09:00"
     public String dayEnd;
+    public String pace;        // "RELAXED", "BALANCED" or "PACKED", for this trip only
 }

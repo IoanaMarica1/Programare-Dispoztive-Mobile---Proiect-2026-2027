@@ -9,8 +9,9 @@ import com.wanderly.R;
 import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
 import java.util.Locale;
-import android.widget.Toast;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import androidx.core.util.Pair;
 
@@ -37,6 +38,9 @@ public class AdventureActivity extends AppCompatActivity {
     // Label shown in the dropdown ("Paris, France") -> the suggestion behind it.
     private final java.util.Map<String, City> suggestions = new java.util.HashMap<>();
     private GenerateTripViewModel viewModel;
+    private TextInputLayout destinationLayout, datesLayout;
+    private com.google.android.material.chip.ChipGroup paceGroup;
+    private boolean paceChanged;  // a late answer from the server must not undo the traveler's choice
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,8 +74,10 @@ public class AdventureActivity extends AppCompatActivity {
             }
         });
 
-        Button datesButton = findViewById(R.id.datesButton);
-        datesButton.setOnClickListener(v -> {
+        destinationLayout = findViewById(R.id.destinationLayout);
+        datesLayout = findViewById(R.id.datesLayout);
+        TextInputEditText datesInput = findViewById(R.id.datesInput);
+        datesInput.setOnClickListener(v -> {
             com.google.android.material.datepicker.CalendarConstraints constraints =
                     new com.google.android.material.datepicker.CalendarConstraints.Builder()
                             .setValidator(com.google.android.material.datepicker.DateValidatorPointForward
@@ -86,12 +92,13 @@ public class AdventureActivity extends AppCompatActivity {
             picker.addOnPositiveButtonClickListener(selection -> {
                 long days = (selection.second - selection.first) / 86_400_000L + 1;
                 if (days > 14) {
-                    Toast.makeText(this, "Trips can last at most 14 days", Toast.LENGTH_LONG).show();
+                    datesLayout.setError(getString(R.string.error_trip_too_long));
                     return;
                 }
+                datesLayout.setErrorEnabled(false);
                 startMillis = selection.first;
                 endMillis = selection.second;
-                datesButton.setText(picker.getHeaderText());
+                datesInput.setText(picker.getHeaderText());
             });
             picker.show(getSupportFragmentManager(), "dates");
         });
@@ -107,6 +114,10 @@ public class AdventureActivity extends AppCompatActivity {
             endMinute = 0;
         });
 
+        paceGroup = findViewById(R.id.paceGroup);
+        paceGroup.setOnCheckedStateChangeListener((group, ids) -> paceChanged = true);
+        if (savedInstanceState == null) preselectPace();
+
         MaterialAutoCompleteTextView destinationInput = findViewById(R.id.destinationInput);
         setupAutocomplete(destinationInput);
         Button generateButton = findViewById(R.id.generateButton);
@@ -116,11 +127,11 @@ public class AdventureActivity extends AppCompatActivity {
                     ? "" : destinationInput.getText().toString().trim();
 
             if (destination.isEmpty()) {
-                destinationInput.setError("Enter a destination");
+                destinationLayout.setError(getString(R.string.error_destination_required));
                 return;
             }
             if (startMillis == null || endMillis == null) {
-                Toast.makeText(this, "Pick your trip dates", Toast.LENGTH_SHORT).show();
+                datesLayout.setError(getString(R.string.error_dates_required));
                 return;
             }
 
@@ -139,9 +150,39 @@ public class AdventureActivity extends AppCompatActivity {
                     .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString();
             req.dayStart = String.format(java.util.Locale.US, "%02d:%02d", startHour, startMinute);
             req.dayEnd = String.format(java.util.Locale.US, "%02d:%02d", endHour, endMinute);
+            req.pace = selectedPace();
 
             sendRequest(req);
         });
+    }
+
+    /** Starts on the saved pace; with several saved, on the fullest one, as the backend does. */
+    private void preselectPace() {
+        ApiClient.getService(getApplicationContext()).getPreferences().enqueue(
+                new retrofit2.Callback<com.wanderly.data.remote.dto.PreferencesResponse>() {
+                    @Override
+                    public void onResponse(@NonNull retrofit2.Call<com.wanderly.data.remote.dto.PreferencesResponse> call,
+                                           @NonNull retrofit2.Response<com.wanderly.data.remote.dto.PreferencesResponse> response) {
+                        com.wanderly.data.remote.dto.PreferencesResponse body = response.body();
+                        if (isDestroyed() || paceChanged || body == null || body.paces == null) return;
+                        if (body.paces.contains("PACKED")) paceGroup.check(R.id.chipPacked);
+                        else if (body.paces.contains("BALANCED")) paceGroup.check(R.id.chipBalanced);
+                        else if (body.paces.contains("RELAXED")) paceGroup.check(R.id.chipRelaxed);
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull retrofit2.Call<com.wanderly.data.remote.dto.PreferencesResponse> call,
+                                          @NonNull Throwable t) {
+                        // Balanced stays selected; the plan request reports network problems.
+                    }
+                });
+    }
+
+    private String selectedPace() {
+        int id = paceGroup.getCheckedChipId();
+        if (id == R.id.chipRelaxed) return "RELAXED";
+        if (id == R.id.chipPacked) return "PACKED";
+        return "BALANCED";
     }
 
     private void setLoading(boolean loading) {
@@ -198,6 +239,7 @@ public class AdventureActivity extends AppCompatActivity {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
             public void onTextChanged(CharSequence s, int a, int b, int c) {}
             public void afterTextChanged(android.text.Editable s) {
+                destinationLayout.setErrorEnabled(false);
                 if (suppressSearch) { suppressSearch = false; return; }
                 if (pendingSearch != null) debounce.removeCallbacks(pendingSearch);
                 String q = s.toString().trim();

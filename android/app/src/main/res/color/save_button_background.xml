@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Disabled means the plan is already saved -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/chip_checked_bg" android:state_enabled="false" />
+    <item android:color="@color/ocean_700" />
+</selector>

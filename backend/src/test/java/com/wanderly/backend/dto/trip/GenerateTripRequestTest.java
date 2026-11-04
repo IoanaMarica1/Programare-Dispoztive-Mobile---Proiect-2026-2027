@@ -38,7 +38,7 @@ class GenerateTripRequestTest {
 
     private static GenerateTripRequest request(String destination, LocalDate start, LocalDate end,
                                                LocalTime dayStart, LocalTime dayEnd) {
-        return new GenerateTripRequest(destination, "France", null, null, start, end, dayStart, dayEnd);
+        return new GenerateTripRequest(destination, "France", null, null, start, end, dayStart, dayEnd, null);
     }
 
     private static Set<String> invalidFields(GenerateTripRequest req) {

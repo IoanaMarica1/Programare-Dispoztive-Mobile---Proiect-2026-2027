@@ -1,5 +1,6 @@
 package com.wanderly.backend.dto.trip;
 
+import com.wanderly.backend.model.Pace;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -28,7 +29,9 @@ public record GenerateTripRequest(
         @NotNull LocalDate startDate,
         @NotNull LocalDate endDate,
         @NotNull LocalTime dayStart,
-        @NotNull LocalTime dayEnd
+        @NotNull LocalTime dayEnd,
+        // Optional: the pace for this trip; without it the one from the saved preferences applies.
+        Pace pace
 ) {
     public static final int MAX_DAYS = 14;
     public static final int MIN_DAY_MINUTES = 60;

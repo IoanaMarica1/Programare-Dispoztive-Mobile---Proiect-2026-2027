@@ -15,6 +15,7 @@ public record TripResponse(
         LocalDate endDate,
         LocalTime dayStart,
         LocalTime dayEnd,
+        boolean saved,
         List<StopResponse> stops
 ) {
     public record StopResponse(

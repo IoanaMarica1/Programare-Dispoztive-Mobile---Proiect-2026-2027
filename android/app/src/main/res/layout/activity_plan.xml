@@ -1,85 +1,284 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Itinerary on top, map below; drag the handle between them to resize, or show the map full screen. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/planRoot"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:orientation="vertical">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/planRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
-    <ScrollView
+    <!-- Always on screen, so Back and Save stay reachable while the list scrolls -->
+    <LinearLayout
+        android:id="@+id/planTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_m">
+
+        <ImageButton
+            android:id="@+id/planBackButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/action_back"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_xs"
+            android:layout_weight="1"
+            android:text="@string/plan_title"
+            android:textAppearance="@style/TextAppearance.Wanderly.Section" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/planSaveButton"
+            style="@style/Widget.Wanderly.Button.Save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/plan_save"
+            app:icon="@drawable/ic_bookmark" />
+    </LinearLayout>
+
+    <!-- The photo card scrolls away with the list; the day chips stay reachable -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:id="@+id/listPane"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/planAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?android:colorBackground"
+            app:elevation="0dp"
+            app:liftOnScroll="false">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/plan_hero_height"
+                android:layout_marginStart="@dimen/space_m"
+                android:layout_marginTop="@dimen/space_xs"
+                android:layout_marginEnd="@dimen/space_m"
+                app:cardCornerRadius="@dimen/radius_card_small"
+                app:cardElevation="0dp"
+                app:layout_scrollFlags="scroll|snap"
+                app:strokeWidth="0dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/bg_ocean" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_plan_hero_scrim" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_m">
+
+                        <TextView
+                            android:id="@+id/planTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:shadowColor="#99000000"
+                            android:shadowDy="1"
+                            android:shadowRadius="6"
+                            android:textColor="@color/text_on_photo"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_xs"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/planDays"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_rank_badge"
+                                android:paddingStart="@dimen/space_s"
+                                android:paddingTop="2dp"
+                                android:paddingEnd="@dimen/space_s"
+                                android:paddingBottom="2dp"
+                                android:textColor="@color/rank_badge_text"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/planSubtitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_s"
+                                android:ellipsize="end"
+                                android:fontFamily="sans-serif-medium"
+                                android:maxLines="1"
+                                android:shadowColor="#99000000"
+                                android:shadowDy="1"
+                                android:shadowRadius="6"
+                                android:textColor="@color/text_on_photo"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <HorizontalScrollView
+                android:id="@+id/dayChipsScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingStart="@dimen/space_m"
+                android:paddingEnd="@dimen/space_m"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/dayChips"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="@dimen/space_s"
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <androidx.core.widget.NestedScrollView
             android:id="@+id/planScroll"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_height="match_parent"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
-                android:id="@+id/planContainer"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="24dp">
+                android:paddingStart="@dimen/space_m"
+                android:paddingTop="@dimen/space_xs"
+                android:paddingEnd="@dimen/space_m"
+                android:paddingBottom="@dimen/space_m">
 
-            <TextView
-                    android:id="@+id/planTitle"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/dayTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Section" />
+
+                    <TextView
+                        android:id="@+id/daySummary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_s"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Body" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/dayEmpty"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@android:color/white"
-                    android:textSize="26sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="@dimen/space_m"
+                    android:text="@string/plan_day_empty"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
 
-            <TextView
-                    android:id="@+id/planSubtitle"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:id="@+id/stopsList"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="#B0BEC5"
-                    android:textSize="14sp" />
-        </LinearLayout>
-    </ScrollView>
+                    android:orientation="vertical" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/addStopButton"
+                    style="@style/Widget.Wanderly.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:text="@string/plan_add_stop"
+                    app:icon="@drawable/ic_add" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- 44dp tall so it is easy to grab; the visible bar is the small pill in the middle. -->
     <FrameLayout
-            android:id="@+id/dividerHandle"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:background="#1E293B"
-            android:contentDescription="Drag to resize the list and the map">
+        android:id="@+id/dividerHandle"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="@color/surface_card"
+        android:contentDescription="@string/plan_handle_description">
 
         <View
-                android:layout_width="48dp"
-                android:layout_height="5dp"
-                android:layout_gravity="center"
-                android:background="#94A3B8" />
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/outline_soft" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_drag_pill" />
     </FrameLayout>
 
     <FrameLayout
-            android:id="@+id/mapFrame"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
+        android:id="@+id/mapFrame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <org.maplibre.android.maps.MapView
-                android:id="@+id/mapView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
         <com.google.android.material.button.MaterialButton
-                android:id="@+id/fullScreenButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|end"
-                android:layout_margin="12dp"
-                android:minHeight="44dp"
-                android:text="Full map" />
+            android:id="@+id/fullScreenButton"
+            style="@style/Widget.Wanderly.Button.Map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:text="@string/plan_full_map"
+            app:icon="@drawable/ic_fullscreen" />
 
         <TextView
-                android:id="@+id/mapError"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:padding="16dp"
-                android:text="The map could not be loaded. Check your connection."
-                android:textColor="#B0BEC5"
-                android:visibility="gone" />
+            android:id="@+id/mapError"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="@dimen/space_m"
+            android:text="@string/plan_map_error"
+            android:textAppearance="@style/TextAppearance.Wanderly.Body"
+            android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

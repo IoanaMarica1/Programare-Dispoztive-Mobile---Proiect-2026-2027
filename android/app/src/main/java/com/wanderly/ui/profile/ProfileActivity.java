@@ -17,13 +17,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.gson.Gson;
 import com.wanderly.R;
 import com.wanderly.data.local.TokenManager;
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.CountryHistoryResponse;
 import com.wanderly.data.remote.dto.PageResponse;
 import com.wanderly.data.remote.dto.PreferencesResponse;
+import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.data.remote.dto.TripSummaryResponse;
 import com.wanderly.data.remote.dto.UserResponse;
+import com.wanderly.ui.adventure.PlanActivity;
 import com.wanderly.ui.auth.LoginActivity;
 import com.wanderly.ui.common.Avatars;
 import com.wanderly.ui.common.Formats;
@@ -48,13 +52,17 @@ public class ProfileActivity extends AppCompatActivity {
     private LinearProgressIndicator rankProgress;
     private ChipGroup preferencesChips;
     private View preferencesEmpty, editPreferencesLink, historyEmpty;
-    private LinearLayout countriesList;
-    private Button showMoreCountriesButton;
+    private LinearLayout countriesList, adventuresList;
+    private View adventuresEmpty;
+    private Button showMoreCountriesButton, showMoreAdventuresButton;
     private ProgressBar progressBar, historyProgress;
 
     private UserResponse user;
     private int nextCountriesPage = 0;
     private boolean loadingCountries = false;
+    private int nextAdventuresPage = 0;
+    private boolean loadingAdventures = false;
+    private boolean openingAdventure = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +86,9 @@ public class ProfileActivity extends AppCompatActivity {
         historyEmpty = findViewById(R.id.historyEmpty);
         countriesList = findViewById(R.id.countriesList);
         showMoreCountriesButton = findViewById(R.id.showMoreCountriesButton);
+        adventuresList = findViewById(R.id.adventuresList);
+        adventuresEmpty = findViewById(R.id.adventuresEmpty);
+        showMoreAdventuresButton = findViewById(R.id.showMoreAdventuresButton);
         progressBar = findViewById(R.id.progressBar);
         historyProgress = findViewById(R.id.historyProgress);
 
@@ -87,6 +98,9 @@ public class ProfileActivity extends AppCompatActivity {
         findViewById(R.id.setPreferencesButton).setOnClickListener(v -> openPreferences());
         findViewById(R.id.startFirstAdventureButton).setOnClickListener(v ->
                 startActivity(new Intent(this, AdventureActivity.class)));
+        findViewById(R.id.newAdventureLink).setOnClickListener(v ->
+                startActivity(new Intent(this, AdventureActivity.class)));
+        showMoreAdventuresButton.setOnClickListener(v -> loadAdventures(false));
         editPreferencesLink.setOnClickListener(v -> openPreferences());
         showMoreCountriesButton.setOnClickListener(v -> loadCountries(false));
         findViewById(R.id.logoutButton).setOnClickListener(v -> logout());
@@ -98,6 +112,7 @@ public class ProfileActivity extends AppCompatActivity {
         super.onResume();
         loadProfile();
         loadPreferences();
+        loadAdventures(true);
         loadCountries(true);
     }
 
@@ -215,6 +230,95 @@ public class ProfileActivity extends AppCompatActivity {
             chip.setText(labels[i]);
             preferencesChips.addView(chip);
         }
+    }
+
+    /** Loads the next page of saved plans, or starts over from the first page. */
+    private void loadAdventures(boolean reset) {
+        if (loadingAdventures) return;
+        loadingAdventures = true;
+        if (reset) nextAdventuresPage = 0;
+        showMoreAdventuresButton.setVisibility(View.GONE);
+
+        ApiClient.getService(this)
+                .getSavedTrips(nextAdventuresPage, PAGE_SIZE)
+                .enqueue(new Callback<PageResponse<TripSummaryResponse>>() {
+                    @Override
+                    public void onResponse(@NonNull Call<PageResponse<TripSummaryResponse>> call,
+                                           @NonNull Response<PageResponse<TripSummaryResponse>> response) {
+                        if (isDestroyed()) return;
+                        loadingAdventures = false;
+
+                        if (response.isSuccessful() && response.body() != null) {
+                            showAdventures(response.body(), reset);
+                        } else if (response.code() != 401) {
+                            Toast.makeText(ProfileActivity.this,
+                                    R.string.profile_adventures_load_failed, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<PageResponse<TripSummaryResponse>> call,
+                                          @NonNull Throwable t) {
+                        if (isDestroyed()) return;
+                        loadingAdventures = false;
+                        // Lets the traveler retry the page that failed.
+                        showMoreAdventuresButton.setVisibility(adventuresList.getChildCount() > 0
+                                ? View.VISIBLE : View.GONE);
+                    }
+                });
+    }
+
+    private void showAdventures(PageResponse<TripSummaryResponse> page, boolean reset) {
+        if (reset) adventuresList.removeAllViews();
+        if (page.content != null) {
+            for (TripSummaryResponse trip : page.content) {
+                adventuresList.addView(adventureRow(trip));
+            }
+        }
+        nextAdventuresPage = page.page + 1;
+        adventuresEmpty.setVisibility(page.totalElements == 0 ? View.VISIBLE : View.GONE);
+        showMoreAdventuresButton.setVisibility(page.hasNext() ? View.VISIBLE : View.GONE);
+    }
+
+    private View adventureRow(TripSummaryResponse trip) {
+        View row = LayoutInflater.from(this).inflate(R.layout.item_history_row, adventuresList, false);
+        ((TextView) row.findViewById(R.id.rowIcon)).setText(Avatars.initialOf(trip.destination));
+        ((TextView) row.findViewById(R.id.rowTitle)).setText(trip.country == null ? trip.destination
+                : getString(R.string.profile_adventure_place, trip.destination, trip.country));
+        ((TextView) row.findViewById(R.id.rowSubtitle)).setText(Formats.dateRange(trip.startDate, trip.endDate));
+        row.setOnClickListener(v -> openAdventure(trip.id));
+        return row;
+    }
+
+    /** The list has no stops, so the whole plan loads when it is opened. */
+    private void openAdventure(String tripId) {
+        if (openingAdventure) return;
+        openingAdventure = true;
+        ApiClient.getService(this).getTrip(tripId).enqueue(new Callback<TripResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<TripResponse> call, @NonNull Response<TripResponse> response) {
+                openingAdventure = false;
+                if (isDestroyed()) return;
+                if (response.isSuccessful() && response.body() != null) {
+                    Intent intent = new Intent(ProfileActivity.this, PlanActivity.class);
+                    intent.putExtra("trip", new Gson().toJson(response.body()));
+                    startActivity(intent);
+                } else if (response.code() == 401) {
+                    Session.expire(ProfileActivity.this);
+                } else {
+                    Toast.makeText(ProfileActivity.this,
+                            R.string.profile_adventure_open_failed, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TripResponse> call, @NonNull Throwable t) {
+                openingAdventure = false;
+                if (!isDestroyed()) {
+                    Toast.makeText(ProfileActivity.this, R.string.error_network, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     /** Loads the next page of countries, or starts over from the first page. */

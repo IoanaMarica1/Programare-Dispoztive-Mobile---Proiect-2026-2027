@@ -1,108 +1,207 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_ocean" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_photo_overlay" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:fitsSystemWindows="true">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="@dimen/space_l">
 
-        <TextView
-                android:layout_width="wrap_content"
+            <ImageView
+                android:layout_width="130dp"
                 android:layout_height="wrap_content"
-                android:text="Start New Adventure"
-                android:textColor="@android:color/white"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/logo_description"
+                android:src="@drawable/logo_wanderly" />
 
-        <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Where are you going?"
-                android:textColor="#B0BEC5"
-                android:textSize="16sp" />
-
-        <com.google.android.material.textfield.TextInputLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Destination">
+                android:layout_marginTop="@dimen/space_l"
+                app:cardBackgroundColor="@color/card_glass"
+                app:cardCornerRadius="@dimen/radius_card"
+                app:cardElevation="0dp"
+                app:contentPadding="@dimen/space_l"
+                app:strokeWidth="0dp">
 
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/destinationInput"
-                    android:completionThreshold="2"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textCapWords"
-                    android:textColor="@android:color/white" />
-        </com.google.android.material.textfield.TextInputLayout>
+                    android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButton
-                android:id="@+id/datesButton"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Select dates" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/adventure_title"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Title" />
 
-        <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Daily rhythm"
-                android:textColor="#B0BEC5"
-                android:textSize="16sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:text="@string/adventure_subtitle"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Body" />
 
-        <com.google.android.material.chip.ChipGroup
-                android:id="@+id/rhythmGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:singleSelection="true"
-                app:selectionRequired="true">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/destinationLayout"
+                        style="@style/Widget.Wanderly.TextInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_l"
+                        android:hint="@string/hint_destination"
+                        app:startIconDrawable="@drawable/ic_place">
 
-            <com.google.android.material.chip.Chip
-                    android:id="@+id/chipEarly"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Early bird" />
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/destinationInput"
+                            style="@style/Widget.Material3.TextInputEditText.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:completionThreshold="2"
+                            android:dropDownVerticalOffset="@dimen/space_xs"
+                            android:inputType="textCapWords"
+                            android:popupBackground="@drawable/bg_dropdown" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.chip.Chip
-                    android:id="@+id/chipStandard"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="Standard" />
+                    <!-- Opens the date range picker; not typed into -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/datesLayout"
+                        style="@style/Widget.Wanderly.TextInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_s"
+                        android:hint="@string/hint_trip_dates"
+                        app:startIconDrawable="@drawable/ic_calendar">
 
-            <com.google.android.material.chip.Chip
-                    android:id="@+id/chipNight"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Night owl" />
-        </com.google.android.material.chip.ChipGroup>
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/datesInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:cursorVisible="false"
+                            android:focusable="false"
+                            android:inputType="none" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.button.MaterialButton
-                android:id="@+id/generateButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:text="Generate plan" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_l"
+                        android:text="@string/adventure_rhythm"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Section" />
 
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/generateProgress"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:indeterminate="true"
-                android:visibility="gone" />
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/rhythmGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_s"
+                        app:chipSpacingHorizontal="@dimen/space_s"
+                        app:chipSpacingVertical="@dimen/space_s"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
 
-    </LinearLayout>
-</ScrollView>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipEarly"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/adventure_rhythm_early" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipStandard"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="@string/adventure_rhythm_standard" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipNight"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/adventure_rhythm_night" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_l"
+                        android:text="@string/adventure_pace"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Section" />
+
+                    <!-- For this trip only; starts on the pace from the saved preferences -->
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/paceGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_s"
+                        app:chipSpacingHorizontal="@dimen/space_s"
+                        app:chipSpacingVertical="@dimen/space_s"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipRelaxed"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/pace_relaxed" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipBalanced"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="@string/pace_balanced" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipPacked"
+                            style="@style/Widget.Wanderly.Chip.Choice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/pace_packed" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/generateButton"
+                        style="@style/Widget.Wanderly.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_l"
+                        android:text="@string/action_generate_plan" />
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/generateProgress"
+                        style="@style/Widget.Wanderly.Progress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_m"
+                        android:indeterminate="true"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

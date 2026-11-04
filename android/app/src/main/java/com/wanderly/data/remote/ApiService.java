@@ -24,6 +24,7 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
 import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.data.remote.dto.TripSummaryResponse;
 import com.wanderly.data.remote.dto.CandidateResponse;
 import com.wanderly.data.remote.dto.StopRequest;
 import java.util.List;
@@ -64,6 +65,17 @@ public interface ApiService {
 
     @POST("api/trips/generate")
     Call<TripResponse> generateTrip(@Body GenerateTripRequest request);
+
+    /** Saved plans only, newest first. */
+    @GET("api/trips")
+    Call<PageResponse<TripSummaryResponse>> getSavedTrips(@Query("page") int page, @Query("size") int size);
+
+    @POST("api/trips/{tripId}/save")
+    Call<TripResponse> saveTrip(@Path("tripId") String tripId);
+
+    /** Discards a draft; a saved plan answers 409. */
+    @DELETE("api/trips/{tripId}")
+    Call<Void> deleteDraft(@Path("tripId") String tripId);
 
     @GET("api/trips/{tripId}")
     Call<TripResponse> getTrip(@Path("tripId") String tripId);

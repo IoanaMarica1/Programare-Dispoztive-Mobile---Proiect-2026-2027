@@ -51,7 +51,8 @@
 
         <activity
                 android:name=".ui.preferences.AdventureActivity"
-                android:theme="@style/Theme.Wanderly.Auth" />
+                android:theme="@style/Theme.Wanderly.Auth"
+                android:windowSoftInputMode="adjustResize" />
 
         <activity android:name=".ui.adventure.PlanActivity" />
 

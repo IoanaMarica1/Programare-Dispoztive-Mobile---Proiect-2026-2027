@@ -2,20 +2,21 @@ package com.wanderly.ui.adventure;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -27,6 +28,7 @@ import com.wanderly.data.remote.ApiService;
 import com.wanderly.data.remote.dto.CandidateResponse;
 import com.wanderly.data.remote.dto.StopRequest;
 import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.ui.common.Formats;
 import com.wanderly.ui.common.Session;
 
 import org.json.JSONArray;
@@ -75,17 +77,18 @@ public class PlanActivity extends AppCompatActivity {
 
     private static final String EMPTY = "{\"type\":\"FeatureCollection\",\"features\":[]}";
     private static final float MIN_LIST = 0.15f, MAX_LIST = 0.85f;
-    private static final int SELECTED_BG = 0xFF1E3A5F;
+    private static final int MIN_STOPS_HEIGHT_DP = 120;
 
     private MapView mapView;
     private MapLibreMap mapRef;
     private Style styleRef;
     private TripResponse trip;
-    private LinearLayout root, container;
-    private ScrollView scroll;
-    private View handle, mapFrame;
-    private MaterialButton fullScreenButton;
-    private int fixedChildren;
+    private LinearLayout root, stopsList;
+    private NestedScrollView scroll;
+    private AppBarLayout appBar;
+    private View topBar, listPane, handle, mapFrame, dayEmpty;
+    private TextView dayTitle, daySummary;
+    private MaterialButton fullScreenButton, saveButton;
     private int dayCount;
     private int selectedDay = 1;
     private String selectedStopId;
@@ -95,13 +98,14 @@ public class PlanActivity extends AppCompatActivity {
     private int routeRequest;  // answers for an older day or plan are ignored
 
     private final TreeMap<Integer, List<TripResponse.Stop>> byDay = new TreeMap<>();
-    private final Map<String, View> rowViews = new HashMap<>();
+    private final Map<String, MaterialCardView> rowViews = new HashMap<>();
     private final List<TextView> legViews = new ArrayList<>();
     private final ExecutorService routeExecutor = Executors.newSingleThreadExecutor();
-    private final OnBackPressedCallback leaveFullScreen = new OnBackPressedCallback(false) {
+    private final OnBackPressedCallback back = new OnBackPressedCallback(true) {
         @Override
         public void handleOnBackPressed() {
-            setFullScreen(false);
+            if (fullScreenMap) setFullScreen(false);
+            else leavePlan();
         }
     };
 
@@ -129,21 +133,41 @@ public class PlanActivity extends AppCompatActivity {
         }
 
         root = findViewById(R.id.planRoot);
+        topBar = findViewById(R.id.planTopBar);
+        saveButton = findViewById(R.id.planSaveButton);
+        saveButton.setOnClickListener(v -> save(null));
+        findViewById(R.id.planBackButton).setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
+        showSavedState();
+        listPane = findViewById(R.id.listPane);
+        appBar = findViewById(R.id.planAppBar);
         scroll = findViewById(R.id.planScroll);
         handle = findViewById(R.id.dividerHandle);
         mapFrame = findViewById(R.id.mapFrame);
         fullScreenButton = findViewById(R.id.fullScreenButton);
-        container = findViewById(R.id.planContainer);
+        stopsList = findViewById(R.id.stopsList);
+        dayTitle = findViewById(R.id.dayTitle);
+        daySummary = findViewById(R.id.daySummary);
+        dayEmpty = findViewById(R.id.dayEmpty);
         ((TextView) findViewById(R.id.planTitle)).setText(trip.destination);
-        ((TextView) findViewById(R.id.planSubtitle)).setText(trip.startDate + "  →  " + trip.endDate);
+        ((TextView) findViewById(R.id.planSubtitle)).setText(Formats.dateRange(trip.startDate, trip.endDate));
+        findViewById(R.id.addStopButton).setOnClickListener(v -> addStop(selectedDay));
 
         groupStops();
         dayCount = countDays();
         selectedDay = Math.min(Math.max(selectedDay, 1), dayCount);
+        ((TextView) findViewById(R.id.planDays)).setText(
+                getResources().getQuantityString(R.plurals.plan_days_count, dayCount, dayCount));
         addDayChips();
         setupDivider();
+        // Landscape or a small list pane: the photo would leave no room for the stops, so it scrolls away.
+        listPane.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            int height = bottom - top;
+            if (height != oldBottom - oldTop && height < appBar.getHeight() + dp(MIN_STOPS_HEIGHT_DP)) {
+                appBar.post(() -> appBar.setExpanded(false));
+            }
+        });
         fullScreenButton.setOnClickListener(v -> setFullScreen(!fullScreenMap));
-        getOnBackPressedDispatcher().addCallback(this, leaveFullScreen);
+        getOnBackPressedDispatcher().addCallback(this, back);
         setSplit(listFraction);
         setFullScreen(fullScreenMap);
 
@@ -158,17 +182,17 @@ public class PlanActivity extends AppCompatActivity {
                     style.addSource(new GeoJsonSource("stops", EMPTY));
                     style.addSource(new GeoJsonSource("selected", EMPTY));
                     style.addLayer(new LineLayer("route-layer", "route").withProperties(
-                            PropertyFactory.lineColor("#0284C7"),
+                            PropertyFactory.lineColor(getColor(R.color.teal_500)),
                             PropertyFactory.lineWidth(4f)));
                     style.addLayer(new CircleLayer("stops-circle", "stops").withProperties(
                             PropertyFactory.circleRadius(14f),
-                            PropertyFactory.circleColor("#0F4C81"),
+                            PropertyFactory.circleColor(getColor(R.color.ocean_700)),
                             PropertyFactory.circleStrokeColor("#FFFFFF"),
                             PropertyFactory.circleStrokeWidth(2f)));
                     // The selected stop: a bigger orange marker under its number.
                     style.addLayer(new CircleLayer("selected-circle", "selected").withProperties(
                             PropertyFactory.circleRadius(19f),
-                            PropertyFactory.circleColor("#F97316"),
+                            PropertyFactory.circleColor(getColor(R.color.sunset_500)),
                             PropertyFactory.circleStrokeColor("#FFFFFF"),
                             PropertyFactory.circleStrokeWidth(3f)));
                     style.addLayer(new SymbolLayer("stops-num", "stops").withProperties(
@@ -188,7 +212,8 @@ public class PlanActivity extends AppCompatActivity {
                             selectStop(stop, false);
                             View row = rowViews.get(stop.id);
                             if (row != null && !fullScreenMap) {
-                                scroll.smoothScrollTo(0, Math.max(0, row.getTop() - 40));
+                                appBar.setExpanded(false);
+                                scroll.smoothScrollTo(0, Math.max(0, stopsList.getTop() + row.getTop() - dp(8)));
                             }
                         }
                         return true;
@@ -223,66 +248,49 @@ public class PlanActivity extends AppCompatActivity {
     }
 
     private void addDayChips() {
-        ChipGroup group = new ChipGroup(this);
-        group.setSingleSelection(true);
-        group.setSelectionRequired(true);
+        ChipGroup group = findViewById(R.id.dayChips);
         Chip toCheck = null;
         for (int day = 1; day <= dayCount; day++) {
             final int d = day;
-            Chip chip = new Chip(this);
-            chip.setText("Day " + day);
-            chip.setCheckable(true);
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_day_chip, group, false);
+            chip.setText(getString(R.string.plan_day, day));
             chip.setId(View.generateViewId());
             chip.setOnCheckedChangeListener((b, checked) -> {
-                if (checked) showDay(d);
+                if (!checked) return;
+                showDay(d);
+                scroll.scrollTo(0, 0);
             });
             group.addView(chip);
             if (day == selectedDay) toCheck = chip;
         }
-        HorizontalScrollView chipScroll = new HorizontalScrollView(this);
-        chipScroll.setHorizontalScrollBarEnabled(false);
-        chipScroll.addView(group);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(12);
-        container.addView(chipScroll, lp);
-        fixedChildren = container.getChildCount();
-        if (toCheck != null) toCheck.setChecked(true);
+        if (toCheck == null) return;
+        toCheck.setChecked(true);
+        // A later day may start off screen, for example after a rotation.
+        final Chip selected = toCheck;
+        HorizontalScrollView chipScroll = findViewById(R.id.dayChipsScroll);
+        chipScroll.post(() -> chipScroll.scrollTo(Math.max(0, selected.getLeft() - dp(16)), 0));
     }
 
     /** Rebuilds the list for one day and refreshes the map. */
     private void showDay(int day) {
         selectedDay = day;
-        while (container.getChildCount() > fixedChildren) {
-            container.removeViewAt(fixedChildren);
-        }
+        stopsList.removeAllViews();
         rowViews.clear();
         legViews.clear();
-        container.addView(text("Day " + day, 20, 0xFFFFFFFF, true, 20));
 
         List<TripResponse.Stop> stops = byDay.getOrDefault(day, new ArrayList<>());
-        if (stops.isEmpty()) {
-            container.addView(text("No stops planned for this day yet.", 14, 0xFFB0BEC5, false, 8));
-        }
+        dayTitle.setText(Formats.tripDay(trip.startDate, day));
+        daySummary.setText(getResources().getQuantityString(R.plurals.plan_stops_count, stops.size(), stops.size()));
+        dayEmpty.setVisibility(stops.isEmpty() ? View.VISIBLE : View.GONE);
+
         for (int idx = 0; idx < stops.size(); idx++) {
-            TripResponse.Stop s = stops.get(idx);
             if (idx > 0) {
-                TextView leg = text("", 13, 0xFF86EFAC, false, 10);
-                leg.setVisibility(View.GONE);
-                container.addView(leg);
+                TextView leg = (TextView) getLayoutInflater().inflate(R.layout.item_plan_leg, stopsList, false);
+                stopsList.addView(leg);
                 legViews.add(leg);
             }
-            container.addView(stopRow(s));
+            stopsList.addView(stopRow(stops.get(idx)));
         }
-        MaterialButton add = new MaterialButton(this, null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        add.setText("+ Add a stop");
-        add.setMinHeight(dp(44));
-        add.setOnClickListener(v -> addStop(day));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(16);
-        container.addView(add, lp);
 
         TripResponse.Stop selected = findStop(selectedStopId);
         if (selected == null || selected.dayNumber != day) selectedStopId = null;
@@ -291,43 +299,32 @@ public class PlanActivity extends AppCompatActivity {
     }
 
     private View stopRow(TripResponse.Stop s) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(dp(10), dp(8), dp(10), dp(8));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(8);
-        row.setLayoutParams(lp);
-        row.setOnClickListener(v -> selectStop(s, true));
+        MaterialCardView card = (MaterialCardView) getLayoutInflater()
+                .inflate(R.layout.item_plan_stop, stopsList, false);
+        card.setOnClickListener(v -> selectStop(s, true));
 
-        String time = s.startTime != null && s.startTime.length() >= 5 ? s.startTime.substring(0, 5) : "";
-        row.addView(text(s.position + ".  " + s.name, 17, 0xFFFFFFFF, true, 0));
-        row.addView(text(time + "  ·  " + s.durationMinutes + " min"
-                + (s.category != null ? "  ·  " + s.category : ""), 14, 0xFFB0BEC5, false, 2));
-        if (s.description != null && !s.description.isEmpty()) {
-            row.addView(text(s.description, 14, 0xFFE2E8F0, false, 4));
-        }
-        if (s.openingHours != null && !s.openingHours.isEmpty()) {
-            row.addView(text("Open: " + s.openingHours, 13, 0xFF7DD3FC, false, 2));
-        }
+        ((TextView) card.findViewById(R.id.stopNumber)).setText(String.valueOf(s.position));
+        ((TextView) card.findViewById(R.id.stopName)).setText(s.name);
+        setTextOrHide(card.findViewById(R.id.stopTime),
+                s.startTime != null && s.startTime.length() >= 5 ? s.startTime.substring(0, 5) : null);
+        ((TextView) card.findViewById(R.id.stopMeta)).setText(s.category != null
+                ? getString(R.string.plan_stop_meta_category, s.durationMinutes, s.category)
+                : getString(R.string.plan_stop_meta, s.durationMinutes));
+        setTextOrHide(card.findViewById(R.id.stopDescription), s.description);
+        setTextOrHide(card.findViewById(R.id.stopHours),
+                s.openingHours == null || s.openingHours.isEmpty() ? null
+                        : getString(R.string.plan_stop_hours, s.openingHours));
+        card.findViewById(R.id.stopSwap).setOnClickListener(v -> swapStop(s));
+        card.findViewById(R.id.stopRemove).setOnClickListener(v -> removeStop(s));
 
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.addView(action("Swap", v -> swapStop(s)));
-        actions.addView(action("Remove", v -> removeStop(s)));
-        row.addView(actions);
-
-        rowViews.put(s.id, row);
-        return row;
+        rowViews.put(s.id, card);
+        return card;
     }
 
-    private View action(String label, View.OnClickListener click) {
-        MaterialButton b = new MaterialButton(this, null,
-                androidx.appcompat.R.attr.borderlessButtonStyle);
-        b.setText(label);
-        b.setMinHeight(dp(44));
-        b.setOnClickListener(click);
-        return b;
+    private static void setTextOrHide(TextView view, String value) {
+        boolean hasText = value != null && !value.isEmpty();
+        view.setText(hasText ? value : "");
+        view.setVisibility(hasText ? View.VISIBLE : View.GONE);
     }
 
     private TripResponse.Stop findStop(String id) {
@@ -349,8 +346,16 @@ public class PlanActivity extends AppCompatActivity {
     }
 
     private void highlightRows() {
-        for (Map.Entry<String, View> e : rowViews.entrySet()) {
-            e.getValue().setBackgroundColor(e.getKey().equals(selectedStopId) ? SELECTED_BG : 0);
+        for (Map.Entry<String, MaterialCardView> e : rowViews.entrySet()) {
+            boolean selected = e.getKey().equals(selectedStopId);
+            MaterialCardView card = e.getValue();
+            // Orange, like the selected marker on the map.
+            card.setStrokeColor(getColor(selected ? R.color.sunset_500 : R.color.outline_soft));
+            card.setStrokeWidth(dp(selected ? 2 : 1));
+            card.findViewById(R.id.stopNumber).setBackgroundResource(
+                    selected ? R.drawable.bg_stop_number_selected : R.drawable.bg_stop_number);
+            // Opening hours from OpenStreetMap can run to five lines: shown in full only when selected.
+            ((TextView) card.findViewById(R.id.stopHours)).setMaxLines(selected ? Integer.MAX_VALUE : 2);
         }
     }
 
@@ -362,6 +367,72 @@ public class PlanActivity extends AppCompatActivity {
         src.setGeoJson(s == null ? EMPTY
                 : "{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"type\":\"Point\",\"coordinates\":["
                   + s.longitude + "," + s.latitude + "]}}");
+    }
+
+    // ------------------------------------------------------------------ saving and leaving
+
+    private void showSavedState() {
+        saveButton.setEnabled(!trip.saved);
+        saveButton.setText(trip.saved ? R.string.plan_saved : R.string.plan_save);
+        saveButton.setIconResource(trip.saved ? R.drawable.ic_check : R.drawable.ic_bookmark);
+    }
+
+    /** Keeps the plan; {@code afterSaving} replaces the message when the traveler is on the way out. */
+    private void save(Runnable afterSaving) {
+        if (busy) return;
+        busy = true;
+        api().saveTrip(trip.id).enqueue(new Callback<TripResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<TripResponse> c, @NonNull Response<TripResponse> response) {
+                busy = false;
+                if (isDestroyed()) return;
+                if (response.isSuccessful() && response.body() != null) {
+                    trip = response.body();
+                    showSavedState();
+                    if (afterSaving != null) afterSaving.run();
+                    else Snackbar.make(root, R.string.plan_saved_message, Snackbar.LENGTH_SHORT).show();
+                } else if (response.code() == 401) {
+                    Session.expire(PlanActivity.this);
+                } else {
+                    showError(ApiClient.errorMessage(response, getString(R.string.plan_save_failed, response.code())));
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TripResponse> c, @NonNull Throwable t) {
+                busy = false;
+                if (!isDestroyed()) showError(getString(R.string.error_network));
+            }
+        });
+    }
+
+    /** A saved plan just closes; a draft asks first, because discarding it deletes it. */
+    private void leavePlan() {
+        if (trip.saved) {
+            finish();
+            return;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.plan_leave_title)
+                .setMessage(R.string.plan_leave_message)
+                .setNeutralButton(R.string.action_cancel, null)
+                .setNegativeButton(R.string.plan_discard, (d, w) -> discard())
+                .setPositiveButton(R.string.plan_save, (d, w) -> save(this::finish))
+                .show();
+    }
+
+    private void discard() {
+        // Nobody waits for the answer: if this fails, the draft stays in the database but is never listed.
+        api().deleteDraft(trip.id).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> c, @NonNull Response<Void> response) {
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> c, @NonNull Throwable t) {
+            }
+        });
+        finish();
     }
 
     // ------------------------------------------------------------------ editing (B3)
@@ -482,8 +553,8 @@ public class PlanActivity extends AppCompatActivity {
                     return true;
                 case MotionEvent.ACTION_MOVE: {
                     int[] loc = new int[2];
-                    root.getLocationOnScreen(loc);
-                    float available = root.getHeight() - handle.getHeight();
+                    listPane.getLocationOnScreen(loc);
+                    float available = listPane.getHeight() + mapFrame.getHeight();
                     if (available <= 0) return true;
                     float y = e.getRawY() - loc[1] - handle.getHeight() / 2f;
                     setSplit(y / available);
@@ -501,20 +572,21 @@ public class PlanActivity extends AppCompatActivity {
     /** Share of the height given to the list (the map gets the rest). */
     private void setSplit(float fraction) {
         listFraction = Math.max(MIN_LIST, Math.min(MAX_LIST, fraction));
-        LinearLayout.LayoutParams listLp = (LinearLayout.LayoutParams) scroll.getLayoutParams();
+        LinearLayout.LayoutParams listLp = (LinearLayout.LayoutParams) listPane.getLayoutParams();
         LinearLayout.LayoutParams mapLp = (LinearLayout.LayoutParams) mapFrame.getLayoutParams();
         listLp.weight = listFraction;
         mapLp.weight = 1 - listFraction;
-        scroll.setLayoutParams(listLp);
+        listPane.setLayoutParams(listLp);
         mapFrame.setLayoutParams(mapLp);
     }
 
     private void setFullScreen(boolean on) {
         fullScreenMap = on;
-        scroll.setVisibility(on ? View.GONE : View.VISIBLE);
+        topBar.setVisibility(on ? View.GONE : View.VISIBLE);
+        listPane.setVisibility(on ? View.GONE : View.VISIBLE);
         handle.setVisibility(on ? View.GONE : View.VISIBLE);
-        fullScreenButton.setText(on ? "Show list" : "Full map");
-        leaveFullScreen.setEnabled(on);
+        fullScreenButton.setText(on ? R.string.plan_show_list : R.string.plan_full_map);
+        fullScreenButton.setIconResource(on ? R.drawable.ic_list : R.drawable.ic_fullscreen);
     }
 
     // ------------------------------------------------------------------ map
@@ -599,7 +671,7 @@ public class PlanActivity extends AppCompatActivity {
                     String dist = meters < 1000
                             ? Math.round(meters) + " m"
                             : String.format(Locale.US, "%.1f km", meters / 1000);
-                    legTexts.add("🚶 " + minutes + " min walk  ·  " + dist);
+                    legTexts.add(getString(R.string.plan_leg, minutes, dist));
                 }
                 runOnUiThread(() -> {
                     if (isDestroyed() || request != routeRequest || styleRef == null) return;
@@ -622,20 +694,6 @@ public class PlanActivity extends AppCompatActivity {
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density);
-    }
-
-    private TextView text(String value, int sp, int color, boolean bold, int topDp) {
-        TextView tv = new TextView(this);
-        tv.setText(value);
-        tv.setTextSize(sp);
-        tv.setTextColor(color);
-        tv.setGravity(Gravity.START);
-        if (bold) tv.setTypeface(null, android.graphics.Typeface.BOLD);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(topDp);
-        tv.setLayoutParams(lp);
-        return tv;
     }
 
     @Override protected void onStart() { super.onStart(); mapView.onStart(); }

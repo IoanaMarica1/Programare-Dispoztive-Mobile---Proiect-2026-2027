@@ -6,7 +6,10 @@ import com.wanderly.backend.dto.trip.GenerateTripRequest;
 import com.wanderly.backend.dto.trip.StopRequest;
 import com.wanderly.backend.dto.trip.TripResponse;
 import com.wanderly.backend.model.Interest;
+import com.wanderly.backend.dto.common.PageResponse;
+import com.wanderly.backend.dto.trip.TripSummaryResponse;
 import com.wanderly.backend.model.Pace;
+import org.springframework.data.domain.Pageable;
 import com.wanderly.backend.model.Trip;
 import com.wanderly.backend.model.TripStop;
 import com.wanderly.backend.model.User;
@@ -134,7 +137,8 @@ public class TripService {
         String destination = req.destination().trim();
         String country = req.country() == null || req.country().isBlank() ? null : req.country().trim();
         var prefs = preferencesService.getPreferences(email).orElse(null);
-        int perDay = stopsPerDay(prefs == null ? Set.of() : prefs.paces());
+        Set<Pace> paces = chosenPaces(req.pace(), prefs == null ? Set.of() : prefs.paces());
+        int perDay = stopsPerDay(paces);
 
         // 1. Real places for this city (each search is cached once it succeeds), shortlisted for Gemini.
         Coordinates centre = req.latitude() != null && req.longitude() != null
@@ -154,7 +158,7 @@ public class TripService {
 
         String interests = prefs == null ? "general sightseeing" : prefs.interests().toString();
         // Pace is an optional wizard step, so it may be empty.
-        String pace = prefs == null || prefs.paces().isEmpty() ? "balanced" : prefs.paces().toString();
+        String pace = paces.isEmpty() ? "balanced" : paces.toString();
         String modes = prefs == null ? "solo" : prefs.travelModes().toString();
 
         String prompt = """
@@ -230,6 +234,11 @@ public class TripService {
 
         Trip saved = tripRepository.save(trip);
         return toResponse(saved);
+    }
+
+    /** The pace picked for this trip wins over the ones saved in the preferences. */
+    static Set<Pace> chosenPaces(Pace forThisTrip, Set<Pace> fromPreferences) {
+        return forThisTrip != null ? Set.of(forThisTrip) : fromPreferences;
     }
 
     /** The most stops a day can have for the chosen paces (see the prompt); balanced when none. */
@@ -471,6 +480,31 @@ public class TripService {
         return toResponse(load(email, tripId));
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<TripSummaryResponse> savedTrips(String email, Pageable pageable) {
+        return PageResponse.from(tripRepository.findByUserEmailAndSavedTrue(email, pageable),
+                t -> new TripSummaryResponse(t.getPublicId(), t.getDestination(), t.getCountry(),
+                        t.getStartDate(), t.getEndDate()));
+    }
+
+    /** Keeps the plan. Saving twice changes nothing. */
+    @Transactional
+    public TripResponse save(String email, UUID tripId) {
+        Trip trip = load(email, tripId);
+        trip.markSaved();
+        return toResponse(trip);
+    }
+
+    /** Throws away a plan the traveler didn't want; a saved plan is refused with 409. */
+    @Transactional
+    public void deleteDraft(String email, UUID tripId) {
+        Trip trip = load(email, tripId);
+        if (trip.isSaved()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A saved plan can't be discarded.");
+        }
+        tripRepository.delete(trip);
+    }
+
     /** Removes a stop; the rest of that day is re-planned (order and times). */
     @Transactional
     public TripResponse removeStop(String email, UUID tripId, UUID stopId) {
@@ -663,6 +697,6 @@ public class TripService {
                 .toList();
         return new TripResponse(t.getPublicId(), t.getDestination(), t.getCountry(),
                 t.getLatitude(), t.getLongitude(), t.getStartDate(), t.getEndDate(),
-                t.getDayStart(), t.getDayEnd(), stops);
+                t.getDayStart(), t.getDayEnd(), t.isSaved(), stops);
     }
 }

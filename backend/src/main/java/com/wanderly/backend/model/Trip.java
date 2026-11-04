@@ -65,6 +65,11 @@ public class Trip {
     @Getter
     private Instant createdAt = Instant.now();
 
+    // A generated plan stays a draft until the traveler saves it.
+    @Column(nullable = false)
+    @Getter
+    private boolean saved = false;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("dayNumber ASC, position ASC")
     @Getter
@@ -92,6 +97,10 @@ public class Trip {
     // orphanRemoval deletes the row.
     public void removeStop(TripStop stop) {
         stops.remove(stop);
+    }
+
+    public void markSaved() {
+        saved = true;
     }
 
     public void setCenter(double latitude, double longitude) {
