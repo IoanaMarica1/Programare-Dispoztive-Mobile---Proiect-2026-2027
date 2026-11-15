@@ -27,6 +27,10 @@ import com.wanderly.data.remote.dto.TripResponse;
 import com.wanderly.data.remote.dto.TripSummaryResponse;
 import com.wanderly.data.remote.dto.CandidateResponse;
 import com.wanderly.data.remote.dto.StopRequest;
+import com.wanderly.data.remote.dto.CheckInRequest;
+import com.wanderly.data.remote.dto.SurprisePlaceResponse;
+import com.wanderly.data.remote.dto.SurpriseRequest;
+import com.wanderly.data.remote.dto.VisitResultResponse;
 import java.util.List;
 
 public interface ApiService {
@@ -94,4 +98,12 @@ public interface ApiService {
 
     @DELETE("api/trips/{tripId}/stops/{stopId}")
     Call<TripResponse> removeStop(@Path("tripId") String tripId, @Path("stopId") String stopId);
+
+    /** The best place within 2 km for a mood, open now. 404: nothing fits; 503: the map is busy. */
+    @POST("api/surprise")
+    Call<SurprisePlaceResponse> surprise(@Body SurpriseRequest request);
+
+    /** 201 on a first visit (points awarded), 200 when the place was visited before. 422: too far away. */
+    @POST("api/surprise/check-in")
+    Call<VisitResultResponse> checkIn(@Body CheckInRequest request);
 }

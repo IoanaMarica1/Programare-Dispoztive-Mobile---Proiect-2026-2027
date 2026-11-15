@@ -42,6 +42,18 @@ public final class Formats {
         }
     }
 
+    /**
+     * A distance a person can picture: 85 → "85 m", 452 → "450 m", 1234 → "1.2 km".
+     * Rounded the way people say it, since the number is a straight line and not exact anyway.
+     */
+    public static String distance(int meters) {
+        int m = Math.max(0, meters);
+        if (m < 100) return m + " m";
+        int tens = Math.round(m / 10f) * 10;
+        if (tens < 1000) return tens + " m";   // 996 would round up to "1000 m": that is "1.0 km"
+        return String.format(java.util.Locale.getDefault(), "%.1f km", m / 1000.0);
+    }
+
     /** "2026-10-12T09:30:00Z" → "12 Oct 2026" in the phone's language and time zone. */
     public static String date(String isoInstant) {
         if (isoInstant == null) return "—";

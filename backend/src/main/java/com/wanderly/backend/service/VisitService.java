@@ -26,9 +26,17 @@ import java.util.function.Function;
 public class VisitService {
 
     public static final int FIRST_VISIT_POINTS = 10;
+    /** Extra points for finishing a Surprise Me suggestion (brief, section 5). */
+    public static final int SURPRISE_BONUS_POINTS = 10;
     /** A check-in only counts within this distance of the objective (brief: anti-abuse). */
     public static final int MAX_CHECK_IN_METERS = 150;
     private static final Duration LOOKUP_BUDGET = Duration.ofSeconds(10);
+    /**
+     * Two visits closer than this are the same place saved under two spellings ("Biserica Neagră" / "Black
+     * Church"). Small on purpose: the next café along the street is a different place and earns its own points.
+     */
+    static final double SAME_SPOT_METERS = 15;
+    private static final double METERS_PER_DEGREE = 111_000.0;
 
     private final VisitRepository visitRepository;
     private final UserService userService;
@@ -60,12 +68,43 @@ public class VisitService {
         }
 
         Coordinates objective = locate(objectiveName, city, country);
-        long meters = Math.round(distanceMeters(request.latitude(), request.longitude(), objective.lat(), objective.lon()));
+        requireNear(objectiveName, objective, request.latitude(), request.longitude());
+
+        return saveFirstVisit(email, objectiveName, city, country, objective, FIRST_VISIT_POINTS);
+    }
+
+    /**
+     * Checks the traveler in at a place Surprise Me suggested, whose position the server has already verified
+     * (see SurpriseService). Finishing the suggested visit earns the Surprise Me bonus on top of the first-visit
+     * points, but only the first time: a place visited before awards nothing, so nobody can farm one place.
+     */
+    public VisitResultResponse recordSurpriseVisit(String email, String objectiveName, String city, String country,
+                                                   Coordinates objective) {
+        User user = userService.getByEmail(email);
+        // The same place may have been checked in by hand under another spelling ("Biserica Neagră" and
+        // "Black Church"): the same spot counts as the same visit, so the points are not paid twice.
+        Optional<Visit> existing = findVisit(user, objectiveName, city, country)
+                .or(() -> findVisitAt(user, objective));
+        if (existing.isPresent()) {
+            return new VisitResultResponse(toResponse(existing.get()), false, 0, user.getPoints());
+        }
+        return saveFirstVisit(email, objectiveName, city, country, objective, FIRST_VISIT_POINTS + SURPRISE_BONUS_POINTS);
+    }
+
+    /**
+     * The one anti-abuse rule for every check-in: the traveler must be within 150 m of the objective.
+     * Throws 422 with the distance otherwise.
+     */
+    public static void requireNear(String objectiveName, Coordinates objective, double lat, double lon) {
+        long meters = Math.round(distanceMeters(lat, lon, objective.lat(), objective.lon()));
         if (meters > MAX_CHECK_IN_METERS) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(422), "You are " + meters + " m from "
                     + objectiveName + ". Check in when you are within " + MAX_CHECK_IN_METERS + " m.");
         }
+    }
 
+    private VisitResultResponse saveFirstVisit(String email, String objectiveName, String city, String country,
+                                               Coordinates objective, int points) {
         return transaction.execute(status -> {
             // Locks the traveler's row: concurrent check-ins queue here, so none of them loses points,
             // and the second of two identical ones sees the first and awards nothing.
@@ -90,8 +129,8 @@ public class VisitService {
                     .visitedAt(Instant.now())
                     .build());
 
-            locked.setPoints(locked.getPoints() + FIRST_VISIT_POINTS);
-            return new VisitResultResponse(toResponse(visit), true, FIRST_VISIT_POINTS, locked.getPoints());
+            locked.setPoints(locked.getPoints() + points);
+            return new VisitResultResponse(toResponse(visit), true, points, locked.getPoints());
         });
     }
 
@@ -111,6 +150,22 @@ public class VisitService {
 
     static double distanceMeters(double lat1, double lon1, double lat2, double lon2) {
         return Geo.distanceMeters(lat1, lon1, lat2, lon2);
+    }
+
+    /**
+     * The traveler's visit within {@value #SAME_SPOT_METERS} m of the point, the nearest if several. The database
+     * narrows it to a box around the point (cheap); the real distance then drops what is in the box's corners.
+     */
+    private Optional<Visit> findVisitAt(User user, Coordinates at) {
+        double dLat = SAME_SPOT_METERS / METERS_PER_DEGREE;
+        double dLon = dLat / Math.max(0.01, Math.cos(Math.toRadians(at.lat())));
+        return visitRepository.findByUserIdAndLatitudeBetweenAndLongitudeBetween(
+                        user.getId(), at.lat() - dLat, at.lat() + dLat, at.lon() - dLon, at.lon() + dLon)
+                .stream()
+                .filter(v -> v.getLatitude() != null && v.getLongitude() != null)
+                .filter(v -> distanceMeters(at.lat(), at.lon(), v.getLatitude(), v.getLongitude()) <= SAME_SPOT_METERS)
+                .min(java.util.Comparator.comparingDouble(
+                        v -> distanceMeters(at.lat(), at.lon(), v.getLatitude(), v.getLongitude())));
     }
 
     private Optional<Visit> findVisit(User user, String objectiveName, String city, String country) {

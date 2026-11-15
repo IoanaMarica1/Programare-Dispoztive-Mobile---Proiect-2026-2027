@@ -5,6 +5,20 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 17+ (targetSdk 37) blocks private-network addresses such as 10.0.2.2 / 192.168.x.x without it. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- Surprise Me: places near the traveler, and check-ins within 150 m of them. Precise or approximate. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Not every phone has a GPS or network location chip; the screen explains what is missing. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+    <!-- "Take me there" opens a maps app (Android 11+ hides apps that are not declared here). -->
+    <queries>
+        <package android:name="com.google.android.apps.maps" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -55,6 +69,8 @@
                 android:windowSoftInputMode="adjustResize" />
 
         <activity android:name=".ui.adventure.PlanActivity" />
+
+        <activity android:name=".ui.surprise.SurpriseActivity" />
 
 
     </application>

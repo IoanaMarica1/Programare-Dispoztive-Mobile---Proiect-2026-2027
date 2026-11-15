@@ -95,4 +95,63 @@ class OpeningHoursTest {
                 .isEqualTo(Result.UNKNOWN);
         assertThat(check("PH off", MONDAY, "10:00", "11:00")).isEqualTo(Result.UNKNOWN);
     }
+
+    private static OpeningHours.Status now(String spec, DayOfWeek day, String time) {
+        return OpeningHours.statusAt(spec, day, minutes(time), 30);
+    }
+
+    @Test
+    @DisplayName("statusAt: deschis acum, cu ora închiderii; închis în afara programului și în ziua liberă")
+    void statusAt_openAndClosed() {
+        String spec = "Tu-Su 10:00-18:00";
+        assertThat(now(spec, TUESDAY, "12:00")).isEqualTo(new OpeningHours.Status(Result.OPEN, minutes("18:00")));
+        assertThat(now(spec, TUESDAY, "09:59").result()).isEqualTo(Result.CLOSED);
+        assertThat(now(spec, TUESDAY, "18:00").result()).isEqualTo(Result.CLOSED);
+        assertThat(now(spec, MONDAY, "12:00").result()).isEqualTo(Result.CLOSED);
+    }
+
+    @Test
+    @DisplayName("statusAt: nu propune un loc care se închide în mai puțin de 30 de minute")
+    void statusAt_closingSoonIsClosed() {
+        String spec = "Mo-Su 09:00-18:00";
+        assertThat(now(spec, MONDAY, "17:30").result()).isEqualTo(Result.OPEN);
+        assertThat(now(spec, MONDAY, "17:31").result()).isEqualTo(Result.CLOSED);
+    }
+
+    @Test
+    @DisplayName("statusAt: pauza de prânz — închis între intervale, deschis din nou după")
+    void statusAt_lunchBreak() {
+        String spec = "Mo-Fr 09:00-12:00,14:00-18:00";
+        assertThat(now(spec, MONDAY, "13:00").result()).isEqualTo(Result.CLOSED);
+        assertThat(now(spec, MONDAY, "14:00")).isEqualTo(new OpeningHours.Status(Result.OPEN, minutes("18:00")));
+    }
+
+    @Test
+    @DisplayName("statusAt: programul care trece de miezul nopții ține și dimineața următoare (Fr 20:00-02:00)")
+    void statusAt_pastMidnight() {
+        String spec = "Fr 20:00-02:00";
+        assertThat(now(spec, FRIDAY, "23:00")).isEqualTo(new OpeningHours.Status(Result.OPEN, 26 * 60));
+        assertThat(now(spec, SATURDAY, "01:00")).isEqualTo(new OpeningHours.Status(Result.OPEN, 2 * 60));
+        assertThat(now(spec, SATURDAY, "01:45").result()).isEqualTo(Result.CLOSED);   // closes in 15 min
+        assertThat(now(spec, SATURDAY, "20:00").result()).isEqualTo(Result.CLOSED);   // only Fridays
+    }
+
+    @Test
+    @DisplayName("statusAt: 24/7 și 00:00-24:00 rămân deschise și în ultimele minute dinaintea miezului nopții")
+    void statusAt_aroundMidnight() {
+        assertThat(now("24/7", SUNDAY, "23:50").result()).isEqualTo(Result.OPEN);
+        assertThat(now("Mo-Su 00:00-24:00", MONDAY, "23:45").result()).isEqualTo(Result.OPEN);
+        // Closes at midnight and doesn't reopen: 23:45 is too late.
+        assertThat(now("Mo-Fr 08:00-24:00", MONDAY, "23:45").result()).isEqualTo(Result.CLOSED);
+        // ... but it does continue when the next day opens at 00:00.
+        assertThat(now("Mo 12:00-24:00; Tu 00:00-06:00", MONDAY, "23:45").result()).isEqualTo(Result.OPEN);
+    }
+
+    @Test
+    @DisplayName("statusAt: ce nu înțelege parserul sau lipsa programului dă UNKNOWN")
+    void statusAt_unknown() {
+        assertThat(now(null, MONDAY, "12:00").result()).isEqualTo(Result.UNKNOWN);
+        assertThat(now("", MONDAY, "12:00").result()).isEqualTo(Result.UNKNOWN);
+        assertThat(now("Apr-Oct Mo-Su 09:00-19:00", MONDAY, "12:00").result()).isEqualTo(Result.UNKNOWN);
+    }
 }

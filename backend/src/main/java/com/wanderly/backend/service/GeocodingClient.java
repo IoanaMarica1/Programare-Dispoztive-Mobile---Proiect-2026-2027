@@ -58,10 +58,14 @@ public class GeocodingClient {
     private long nextSlot = 0;  // epoch millis of the next free request slot; guarded by this
 
     public GeocodingClient() {
+        this.http = client(READ_TIMEOUT);
+    }
+
+    private static RestClient client(Duration readTimeout) {
         SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
         f.setConnectTimeout(Duration.ofSeconds(3));
-        f.setReadTimeout(READ_TIMEOUT);
-        this.http = RestClient.builder()
+        f.setReadTimeout(readTimeout);
+        return RestClient.builder()
                 .baseUrl("https://nominatim.openstreetmap.org")
                 .defaultHeader("User-Agent", "WanderlyStudentApp/0.1 (university project)")
                 .requestFactory(f)
@@ -113,6 +117,105 @@ public class GeocodingClient {
         List<Found> found = search(query, null, 1, deadline);
         if (found == null) throw new IllegalStateException("Place lookup unavailable");
         return found.stream().findFirst().map(f -> new Coordinates(f.lat(), f.lon()));
+    }
+
+    /**
+     * Fallback for Surprise Me when Overpass is busy: named places of one kind ("park", "restaurant") inside
+     * the square around a point, with their OSM tags rebuilt from Nominatim's class/type and extra tags so the
+     * same ranking applies. Null when the request failed or its turn came after the deadline.
+     */
+    @SuppressWarnings("unchecked")
+    public List<OverpassClient.Element> nearby(String term, double lat, double lon, int radiusMeters, Instant deadline) {
+        double dLat = radiusMeters / 111_000.0;
+        double dLon = dLat / Math.max(0.01, Math.cos(Math.toRadians(lat)));
+        String box = String.format(Locale.ROOT, "%.5f,%.5f,%.5f,%.5f", lon - dLon, lat + dLat, lon + dLon, lat - dLat);
+        try {
+            if (!waitForSlot(deadline)) return null;
+            // The answer must still arrive before the deadline: the slot only says when the request may start.
+            Duration left = Duration.between(Instant.now(), deadline);
+            if (left.toMillis() < 400) return null;
+            List<Map<String, Object>> res = client(left.compareTo(READ_TIMEOUT) < 0 ? left : READ_TIMEOUT).get()
+                    .uri(b -> b.path("/search").queryParam("q", term)
+                            .queryParam("format", "json")
+                            .queryParam("extratags", 1)
+                            .queryParam("limit", 40)
+                            .queryParam("viewbox", box).queryParam("bounded", 1)
+                            .queryParam("accept-language", "en")
+                            .build())
+                    .retrieve()
+                    .body(List.class);
+
+            List<OverpassClient.Element> found = new ArrayList<>();
+            for (Map<String, Object> r : res == null ? List.<Map<String, Object>>of() : res) {
+                Object name = r.get("name");
+                if (!(name instanceof String n) || n.isBlank()) continue;
+                if (!(r.get("osm_type") instanceof String type) || !(r.get("osm_id") instanceof Number id)) continue;
+
+                Map<String, String> tags = new java.util.HashMap<>();
+                if (r.get("extratags") instanceof Map<?, ?> extra) {
+                    extra.forEach((k, v) -> tags.put(String.valueOf(k), String.valueOf(v)));
+                }
+                if (r.get("class") instanceof String c && r.get("type") instanceof String t) tags.put(c, t);
+
+                found.add(new OverpassClient.Element(type + "/" + id.longValue(),
+                        n.length() > MAX_NAME ? n.substring(0, MAX_NAME) : n.trim(),
+                        Double.parseDouble((String) r.get("lat")), Double.parseDouble((String) r.get("lon")),
+                        Map.copyOf(tags)));
+            }
+            return List.copyOf(found);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception e) {
+            log.debug("Nominatim nearby '{}' failed: {}", term, e.toString());
+            return null;
+        }
+    }
+
+    /** The town and country at a point, in English. */
+    public record Address(String city, String country) {}
+
+    /**
+     * Which town and country a point is in. Empty when the point isn't in a named town (open sea, desert);
+     * throws {@link IllegalStateException} when Nominatim can't be reached in time.
+     */
+    @SuppressWarnings("unchecked")
+    public Optional<Address> reverse(double lat, double lon, Instant deadline) {
+        try {
+            if (!waitForSlot(deadline)) throw new IllegalStateException("Place lookup unavailable");
+            Map<String, Object> res = http.get()
+                    .uri(b -> b.path("/reverse")
+                            .queryParam("lat", String.format(Locale.ROOT, "%.6f", lat))
+                            .queryParam("lon", String.format(Locale.ROOT, "%.6f", lon))
+                            .queryParam("format", "jsonv2")
+                            .queryParam("zoom", 14)
+                            .queryParam("addressdetails", 1)
+                            .queryParam("accept-language", "en")
+                            .build())
+                    .retrieve()
+                    .body(Map.class);
+            if (res == null || !(res.get("address") instanceof Map<?, ?> a)) return Optional.empty();
+            Map<String, Object> address = (Map<String, Object>) a;
+
+            Object country = address.get("country");
+            String city = null;
+            for (String key : List.of("city", "town", "village", "municipality", "suburb", "county")) {
+                if (address.get(key) instanceof String s && !s.isBlank()) {
+                    city = s.trim();
+                    break;
+                }
+            }
+            if (city == null || !(country instanceof String c) || c.isBlank()) return Optional.empty();
+            return Optional.of(new Address(city, c.trim()));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Place lookup unavailable", e);
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.debug("Nominatim reverse ({}, {}) failed: {}", lat, lon, e.toString());
+            throw new IllegalStateException("Place lookup unavailable", e);
+        }
     }
 
     /** Cached results, or a fresh search; null when it failed or its turn came too late. */

@@ -18,11 +18,13 @@ import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -173,6 +175,123 @@ class VisitServiceTest {
                 new VisitRequest("Castelul Bran", "Bran", "romania", NEAR_LAT, BRAN.lon()));
 
         assertThat(result.visit().country()).isEqualTo("Romania");
+    }
+
+    @Test
+    @DisplayName("Surprise Me: prima vizită la locul propus → +10 (prima vizită) +10 (bonus Surprise Me), pe coordonatele locului")
+    void recordSurpriseVisit_firstVisit_awardsBonus() {
+        when(visitRepository.findByUserIdAndObjectiveNameIgnoreCaseAndCityIgnoreCaseAndCountryIgnoreCase(
+                1L, "Castelul Bran", "Bran", "Romania")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailForUpdate("ana@test.com")).thenReturn(Optional.of(user));
+        when(visitRepository.save(any(Visit.class))).thenAnswer(i -> i.getArgument(0));
+
+        VisitResultResponse result = visitService.recordSurpriseVisit("ana@test.com", "Castelul Bran", "Bran",
+                "Romania", BRAN);
+
+        assertThat(result.firstVisit()).isTrue();
+        assertThat(result.pointsAwarded()).isEqualTo(VisitService.FIRST_VISIT_POINTS + VisitService.SURPRISE_BONUS_POINTS)
+                .isEqualTo(20);
+        assertThat(result.totalPoints()).isEqualTo(50);
+        assertThat(user.getPoints()).isEqualTo(50);
+        assertThat(result.visit().latitude()).isEqualTo(BRAN.lat());
+        verify(geocoder, never()).locate(any(), any());   // the place was already verified by the caller
+    }
+
+    @Test
+    @DisplayName("Surprise Me: același loc bifat înainte manual, cu alt nume (aceleași coordonate) → 0 puncte, fără vizită nouă")
+    void recordSurpriseVisit_sameSpotUnderAnotherName_awardsNothing() {
+        when(visitRepository.findByUserIdAndObjectiveNameIgnoreCaseAndCityIgnoreCaseAndCountryIgnoreCase(
+                1L, "Bran Castle", "Bran", "Romania")).thenReturn(Optional.empty());
+        when(visitRepository.findByUserIdAndLatitudeBetweenAndLongitudeBetween(
+                eq(1L), anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(List.of(existingVisit()));
+
+        VisitResultResponse result = visitService.recordSurpriseVisit("ana@test.com", "Bran Castle", "Bran",
+                "Romania", BRAN);
+
+        assertThat(result.firstVisit()).isFalse();
+        assertThat(result.pointsAwarded()).isZero();
+        assertThat(result.visit().objectiveName()).isEqualTo("Castelul Bran");
+        assertThat(user.getPoints()).isEqualTo(30);
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Un loc vecin (~22 m, altă clădire) NU e „același loc”: se salvează și primește punctele lui")
+    void recordSurpriseVisit_neighbouringPlace_isANewVisit() {
+        Visit nextDoor = Visit.builder()
+                .user(user).objectiveName("Cafe Zero").city("Bran").country("Romania")
+                .latitude(BRAN.lat() + 0.0002).longitude(BRAN.lon()).visitedAt(Instant.parse("2026-09-01T10:00:00Z"))
+                .build();
+        // The database returns it (it is inside the box's reach); the real distance rules it out.
+        when(visitRepository.findByUserIdAndLatitudeBetweenAndLongitudeBetween(
+                eq(1L), anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(List.of(nextDoor));
+        when(userRepository.findByEmailForUpdate("ana@test.com")).thenReturn(Optional.of(user));
+        when(visitRepository.save(any(Visit.class))).thenAnswer(i -> i.getArgument(0));
+
+        VisitResultResponse result = visitService.recordSurpriseVisit("ana@test.com", "Cafe Next Door", "Bran",
+                "Romania", BRAN);
+
+        assertThat(result.firstVisit()).isTrue();
+        assertThat(result.pointsAwarded()).isEqualTo(20);
+        assertThat(result.visit().objectiveName()).isEqualTo("Cafe Next Door");
+    }
+
+    @Test
+    @DisplayName("Căutarea „același loc” cere căsuța în jurul obiectivului: ±15 m, nu zeci de metri")
+    void recordSurpriseVisit_sameSpotBoxIsSmall() {
+        when(userRepository.findByEmailForUpdate("ana@test.com")).thenReturn(Optional.of(user));
+        when(visitRepository.save(any(Visit.class))).thenAnswer(i -> i.getArgument(0));
+
+        visitService.recordSurpriseVisit("ana@test.com", "Bran Castle", "Bran", "Romania", BRAN);
+
+        org.mockito.ArgumentCaptor<Double> box = org.mockito.ArgumentCaptor.forClass(Double.class);
+        verify(visitRepository).findByUserIdAndLatitudeBetweenAndLongitudeBetween(
+                eq(1L), box.capture(), box.capture(), box.capture(), box.capture());
+        assertThat(box.getAllValues().get(1) - box.getAllValues().get(0)).isBetween(0.00026, 0.00028);   // 2 × 15 m
+    }
+
+    @Test
+    @DisplayName("Regula de 150 m e aceeași pentru toate check-in-urile: 422 cu distanța, sau nimic")
+    void requireNear_isShared() {
+        VisitService.requireNear("Castelul Bran", BRAN, NEAR_LAT, BRAN.lon());   // ~100 m: fine
+
+        assertThatThrownBy(() -> VisitService.requireNear("Castelul Bran", BRAN, BRAN.lat() + 0.009, BRAN.lon()))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> {
+                    assertThat(e.getStatusCode().value()).isEqualTo(422);
+                    assertThat(e.getReason()).contains("Castelul Bran").contains("150 m");
+                });
+    }
+
+    @Test
+    @DisplayName("Surprise Me: loc vizitat deja → 0 puncte (nici bonus), fără salvare — un loc nu se poate „exploata”")
+    void recordSurpriseVisit_repeat_awardsNothing() {
+        when(visitRepository.findByUserIdAndObjectiveNameIgnoreCaseAndCityIgnoreCaseAndCountryIgnoreCase(
+                1L, "Castelul Bran", "Bran", "Romania")).thenReturn(Optional.of(existingVisit()));
+
+        VisitResultResponse result = visitService.recordSurpriseVisit("ana@test.com", "Castelul Bran", "Bran",
+                "Romania", BRAN);
+
+        assertThat(result.firstVisit()).isFalse();
+        assertThat(result.pointsAwarded()).isZero();
+        assertThat(user.getPoints()).isEqualTo(30);
+        verify(visitRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Surprise Me: două check-in-uri simultane la același loc → bonusul se dă o singură dată")
+    void recordSurpriseVisit_concurrent_awardsOnce() {
+        when(visitRepository.findByUserIdAndObjectiveNameIgnoreCaseAndCityIgnoreCaseAndCountryIgnoreCase(
+                1L, "Castelul Bran", "Bran", "Romania"))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existingVisit()));
+        when(userRepository.findByEmailForUpdate("ana@test.com")).thenReturn(Optional.of(user));
+
+        VisitResultResponse result = visitService.recordSurpriseVisit("ana@test.com", "Castelul Bran", "Bran",
+                "Romania", BRAN);
+
+        assertThat(result.firstVisit()).isFalse();
+        assertThat(user.getPoints()).isEqualTo(30);
+        verify(visitRepository, never()).save(any());
     }
 
     @Test

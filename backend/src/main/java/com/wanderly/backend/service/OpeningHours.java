@@ -61,6 +61,49 @@ final class OpeningHours {
         return best;
     }
 
+    /**
+     * Whether the place is open right now. {@code closesAt} is minutes from today's midnight (1440 or more
+     * when it closes after midnight); only meaningful when OPEN.
+     */
+    record Status(Result result, int closesAt) {}
+
+    /**
+     * Open at {@code minute} of {@code day} with at least {@code minRemaining} minutes left before it closes,
+     * so a place closing in five minutes isn't suggested. Unlike {@link #check}, hours that run past midnight
+     * count the next morning too ("Fr 20:00-02:00" is open on Saturday at 01:00), and back-to-back ranges
+     * across midnight ("00:00-24:00" every day) are followed through.
+     */
+    static Status statusAt(String spec, DayOfWeek day, int minute, int minRemaining) {
+        Map<DayOfWeek, List<int[]>> week = parse(spec);
+        if (week == null) return new Status(Result.UNKNOWN, -1);
+
+        int end = -1;
+        for (int[] r : week.getOrDefault(day, List.of())) {
+            if (r[0] <= minute && minute < r[1]) end = Math.max(end, r[1]);
+        }
+        // Yesterday's hours that ran past midnight into today.
+        for (int[] r : week.getOrDefault(day.minus(1), List.of())) {
+            if (r[1] > DAY_MINUTES && minute < r[1] - DAY_MINUTES) end = Math.max(end, r[1] - DAY_MINUTES);
+        }
+        if (end < 0) return new Status(Result.CLOSED, -1);
+
+        // Reaching midnight while open: keep going while the next day opens at 00:00, so a place open
+        // around the clock ends up with a closing time days away instead of a false "closes at midnight".
+        DayOfWeek next = day;
+        int offset = 0;
+        for (int hops = 0; hops < 3 && end == offset + DAY_MINUTES; hops++) {
+            next = next.plus(1);
+            offset += DAY_MINUTES;
+            int continued = -1;
+            for (int[] r : week.getOrDefault(next, List.of())) {
+                if (r[0] == 0) continued = Math.max(continued, r[1]);
+            }
+            if (continued < 0) break;
+            end = offset + continued;
+        }
+        return end - minute >= minRemaining ? new Status(Result.OPEN, end) : new Status(Result.CLOSED, -1);
+    }
+
     /** Opening ranges per weekday (minutes from midnight), or null when the tag can't be understood. */
     private static Map<DayOfWeek, List<int[]>> parse(String spec) {
         if (spec == null || spec.isBlank()) return null;

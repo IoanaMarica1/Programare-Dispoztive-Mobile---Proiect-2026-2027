@@ -35,6 +35,7 @@ import com.wanderly.ui.common.Session;
 import com.wanderly.ui.preferences.AdventureActivity;
 import com.wanderly.ui.preferences.PreferencesActivity;
 import com.wanderly.ui.preferences.PreferencesWizard;
+import com.wanderly.ui.surprise.SurpriseActivity;
 
 import java.util.List;
 
@@ -93,6 +94,8 @@ public class ProfileActivity extends AppCompatActivity {
         historyProgress = findViewById(R.id.historyProgress);
 
         findViewById(R.id.editProfileButton).setOnClickListener(v -> openEditProfile(false));
+        findViewById(R.id.surpriseCard).setOnClickListener(v ->
+                startActivity(new Intent(this, SurpriseActivity.class)));
         findViewById(R.id.aboutCard).setOnClickListener(v -> openEditProfile(true));
         findViewById(R.id.editBioLink).setOnClickListener(v -> openEditProfile(true));
         findViewById(R.id.setPreferencesButton).setOnClickListener(v -> openPreferences());

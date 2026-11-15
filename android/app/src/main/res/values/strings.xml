@@ -199,4 +199,52 @@
         <item>@string/pace_balanced</item>
         <item>@string/pace_packed</item>
     </string-array>
+
+    <!-- Surprise Me -->
+    <string name="surprise_title">Surprise me</string>
+    <string name="surprise_subtitle">Got free time? Pick a mood and we\'ll find the best place open right now, within 2 km.</string>
+    <string name="surprise_entry_title">Surprise me</string>
+    <string name="surprise_entry_body">Free time? Get a place to go right now, within 2 km.</string>
+    <string name="mood_curious">🤔 Curious</string>
+    <string name="mood_relaxed">😌 Relaxed</string>
+    <string name="mood_social">🥂 Social</string>
+    <string name="mood_adventurous">🧗 Adventurous</string>
+    <string name="mood_hungry">🍽️ Hungry</string>
+    <string name="mood_cultural">🎭 Cultural</string>
+    <string name="surprise_loading">Finding something good nearby…</string>
+    <string name="surprise_distance_walk">%1$s · %2$d min on foot</string>
+    <string name="surprise_photo_description">Photo of %1$s</string>
+    <string name="surprise_take_me_there">Take me there</string>
+    <string name="surprise_another">Another one</string>
+    <string name="surprise_no_more">That\'s everything open nearby</string>
+    <string name="surprise_check_in">I\'m here, check in</string>
+    <string name="surprise_checking_in">Checking in…</string>
+    <string name="surprise_checked_in">Checked in</string>
+    <string name="surprise_change_mood">Change mood</string>
+    <string name="surprise_attribution">Place data © OpenStreetMap contributors</string>
+    <string name="surprise_retry">Try again</string>
+
+    <string name="surprise_permission_title">We need your location</string>
+    <string name="surprise_permission_body">Surprise me looks for places around you. Your location is only used for this search and for check-ins.</string>
+    <string name="surprise_permission_allow">Allow location</string>
+    <string name="surprise_permission_denied_title">Location is turned off for Wanderly</string>
+    <string name="surprise_permission_denied_body">Turn location on in the app settings to get suggestions near you.</string>
+    <string name="surprise_open_settings">Open settings</string>
+    <string name="surprise_services_off_title">Location is switched off</string>
+    <string name="surprise_services_off_body">Turn on location on your phone so we can find places near you.</string>
+    <string name="surprise_open_location_settings">Open location settings</string>
+    <string name="surprise_unavailable_title">Can\'t find where you are</string>
+    <string name="surprise_unavailable_body">Move to a spot with a clear view of the sky or a better signal, then try again.</string>
+    <string name="surprise_nothing_title">Nothing to suggest</string>
+    <string name="surprise_error_title">Something went wrong</string>
+    <string name="surprise_error_generic">Could not get a suggestion. Try again.</string>
+    <string name="surprise_check_in_failed">Could not check in. Try again.</string>
+    <string name="surprise_check_in_precise">Check-in needs your precise location. Allow \"Precise\" for Wanderly in the app settings.</string>
+    <plurals name="surprise_check_in_earned">
+        <item quantity="one">You earned %1$d point. Your total is now %2$d.</item>
+        <item quantity="other">You earned %1$d points. Your total is now %2$d.</item>
+    </plurals>
+    <string name="surprise_check_in_repeat">You have been to %1$s before, so no new points this time.</string>
+    <string name="surprise_check_in_done_title">Checked in at %1$s</string>
+    <string name="action_ok">OK</string>
 </resources>

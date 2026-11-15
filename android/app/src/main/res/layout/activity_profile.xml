@@ -230,6 +230,60 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Surprise Me: o idee pentru acum, în 2 km -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/surpriseCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_m"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/chip_checked_bg"
+            app:cardCornerRadius="@dimen/radius_card_small"
+            app:cardElevation="0dp"
+            app:contentPadding="@dimen/space_l"
+            app:strokeColor="@color/chip_checked_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/surprise_entry_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/surprise_entry_body"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Body" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="@dimen/space_s"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Despre: cardul deschide editarea direct pe bio -->
         <LinearLayout
             android:layout_width="match_parent"
