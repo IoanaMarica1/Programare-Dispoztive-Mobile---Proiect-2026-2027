@@ -6,13 +6,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -21,6 +26,8 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -30,7 +37,13 @@ public class AvatarService {
     public static final String AVATAR_URL_PREFIX = "/uploads/avatars/";
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png");
+    private static final Set<String> ALLOWED_FORMATS = Set.of("jpeg", "jpg", "png");
     private static final int MAX_DIMENSION = 512;
+    /**
+     * A 5 MB file can still declare e.g. 30000 x 30000 pixels (a "decompression bomb"); decoding that
+     * would need gigabytes of memory. Bigger images are refused, smaller ones are decoded subsampled.
+     */
+    static final long MAX_PIXELS = 100_000_000L;
     private static final float JPEG_QUALITY = 0.8f;
 
     private final UserService userService;
@@ -44,29 +57,83 @@ public class AvatarService {
     @Transactional
     public UserResponse uploadAvatar(String email, MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose an image.");
+            throw badRequest("Please choose an image.");
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only JPEG and PNG images are allowed.");
+            throw badRequest("Only JPEG and PNG images are allowed.");
         }
-
-        BufferedImage original;
-        try (InputStream in = file.getInputStream()) {
-            original = ImageIO.read(in);
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The image could not be read.");
-        }
-        if (original == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The image could not be read.");
-        }
+        BufferedImage original = read(file);
 
         User user = userService.getByEmail(email);
         String fileName = "user-" + user.getPublicId() + "-" + UUID.randomUUID() + ".jpg";
-        writeCompressedJpeg(resize(original), avatarDir.resolve(fileName));
+        Path newFile = avatarDir.resolve(fileName);
+        writeCompressedJpeg(resize(original), newFile);
 
-        deleteOldAvatar(user.getProfilePicture());
+        String oldUrl = user.getProfilePicture();
         user.setProfilePicture(AVATAR_URL_PREFIX + fileName);
+        cleanUpAfterCommit(oldUrl, newFile);
         return userService.toResponse(user);
+    }
+
+    /**
+     * Decodes the image only after checking what it really is (not what the client claims) and how
+     * big it is, reading every n-th pixel so the decoded image stays around twice the avatar size.
+     */
+    static BufferedImage read(MultipartFile file) {
+        try (InputStream in = file.getInputStream(); ImageInputStream iis = ImageIO.createImageInputStream(in)) {
+            Iterator<ImageReader> readers = iis == null ? null : ImageIO.getImageReaders(iis);
+            if (readers == null || !readers.hasNext()) throw badRequest("The image could not be read.");
+            ImageReader reader = readers.next();
+            try {
+                if (!ALLOWED_FORMATS.contains(reader.getFormatName().toLowerCase(Locale.ROOT))) {
+                    throw badRequest("Only JPEG and PNG images are allowed.");
+                }
+                reader.setInput(iis, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0 || (long) width * height > MAX_PIXELS) {
+                    throw badRequest("The image is too large. Please choose a smaller photo.");
+                }
+                ImageReadParam param = reader.getDefaultReadParam();
+                int step = Math.max(1, Math.max(width, height) / (MAX_DIMENSION * 2));
+                param.setSourceSubsampling(step, step, 0, 0);
+                BufferedImage image = reader.read(0, param);
+                if (image == null) throw badRequest("The image could not be read.");
+                return image;
+            } finally {
+                reader.dispose();
+            }
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            // Corrupt files make the decoders throw all sorts of exceptions.
+            throw badRequest("The image could not be read.");
+        }
+    }
+
+    /**
+     * Files are not part of the transaction: delete the previous avatar only once the new one is
+     * saved in the profile, and remove the new file if saving the profile fails.
+     */
+    private void cleanUpAfterCommit(String oldUrl, Path newFile) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteOldAvatar(oldUrl);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_COMMITTED) {
+                    deleteOldAvatar(oldUrl);
+                } else {
+                    deleteQuietly(newFile);
+                }
+            }
+        });
+    }
+
+    private static ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
     }
 
     private BufferedImage resize(BufferedImage source) {
@@ -98,6 +165,7 @@ public class AvatarService {
                 writer.write(null, new IIOImage(image, null, null), params);
             }
         } catch (IOException e) {
+            deleteQuietly(destination);
             throw new UncheckedIOException("Could not save avatar", e);
         } finally {
             writer.dispose();
@@ -109,13 +177,16 @@ public class AvatarService {
             return;
         }
         Path oldFile = avatarDir.resolve(oldUrl.substring(AVATAR_URL_PREFIX.length())).normalize();
-        if (!oldFile.startsWith(avatarDir)) {
-            return;
+        if (oldFile.startsWith(avatarDir)) {
+            deleteQuietly(oldFile);
         }
+    }
+
+    private static void deleteQuietly(Path file) {
         try {
-            Files.deleteIfExists(oldFile);
+            Files.deleteIfExists(file);
         } catch (IOException ignored) {
-            // A leftover file is harmless; the profile already points to the new one.
+            // A leftover file is harmless.
         }
     }
 }

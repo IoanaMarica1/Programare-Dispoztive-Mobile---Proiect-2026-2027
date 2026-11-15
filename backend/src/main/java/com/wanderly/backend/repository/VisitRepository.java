@@ -15,6 +15,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     Optional<Visit> findByUserIdAndObjectiveNameIgnoreCaseAndCityIgnoreCaseAndCountryIgnoreCase(
             Long userId, String objectiveName, String city, String country);
 
+    // Plain GROUP BY is enough: VisitService saves a country with the spelling the traveler
+    // already has ("italy" becomes "Italy"), so one country never appears twice.
     @Query(value = """
             SELECT new com.wanderly.backend.dto.history.CountryHistoryResponse(
                 v.country, COUNT(v), MAX(v.visitedAt))
@@ -25,6 +27,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
             """,
             countQuery = "SELECT COUNT(DISTINCT v.country) FROM Visit v WHERE v.user.id = :userId")
     Page<CountryHistoryResponse> findCountriesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    Optional<Visit> findFirstByUserIdAndCountryIgnoreCase(Long userId, String country);
 
     Page<Visit> findByUserIdAndCountryIgnoreCaseOrderByVisitedAtDesc(Long userId, String country, Pageable pageable);
 }

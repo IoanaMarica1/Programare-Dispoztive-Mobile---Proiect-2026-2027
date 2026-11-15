@@ -3,7 +3,6 @@ package com.wanderly.backend.auth;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.security.WeakKeyException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -55,8 +54,11 @@ class JwtServiceTest {
     }
 
     @Test
-    @DisplayName("Cheie prea scurtă (sub 32 caractere) nu este acceptată")
-    void constructor_shortSecret_throwsWeakKeyException() {
-        assertThrows(WeakKeyException.class, () -> new JwtService("too-short", ONE_HOUR));
+    @DisplayName("Cheie lipsă, prea scurtă sau lăsată ca în exemplu → aplicația nu pornește")
+    void constructor_missingOrWeakSecret_throws() {
+        assertThrows(IllegalStateException.class, () -> new JwtService("too-short", ONE_HOUR));
+        assertThrows(IllegalStateException.class, () -> new JwtService("", ONE_HOUR));
+        assertThrows(IllegalStateException.class,
+                () -> new JwtService("CHANGE_ME_TO_A_RANDOM_STRING_OF_32_PLUS_CHARACTERS", ONE_HOUR));
     }
 }

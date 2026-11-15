@@ -16,9 +16,17 @@ public class JwtService {
     private final SecretKey key;
     private final long expirationMs;
 
-    public JwtService(@Value("${jwt.secret}") String secret,
+    /** HS256 needs a key of at least 256 bits. */
+    static final int MIN_SECRET_BYTES = 32;
+
+    public JwtService(@Value("${jwt.secret:}") String secret,
                       @Value("${jwt.expiration-ms}") long expirationMs) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secret.isBlank() || secret.startsWith("CHANGE_ME") || bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("jwt.secret must be set to a random string of at least "
+                    + MIN_SECRET_BYTES + " characters in secrets.properties (see secrets.properties.example)");
+        }
+        this.key = Keys.hmacShaKeyFor(bytes);
         this.expirationMs = expirationMs;
     }
 

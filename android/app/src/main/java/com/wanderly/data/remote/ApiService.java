@@ -14,6 +14,7 @@ import com.wanderly.data.remote.dto.VisitResponse;
 import okhttp3.MultipartBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
@@ -21,6 +22,12 @@ import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import com.wanderly.data.remote.dto.GenerateTripRequest;
+import com.wanderly.data.remote.dto.TripResponse;
+import com.wanderly.data.remote.dto.TripSummaryResponse;
+import com.wanderly.data.remote.dto.CandidateResponse;
+import com.wanderly.data.remote.dto.StopRequest;
+import java.util.List;
 
 public interface ApiService {
 
@@ -55,4 +62,36 @@ public interface ApiService {
     Call<PageResponse<VisitResponse>> getVisitsInCountry(@Path("country") String country,
                                                          @Query("page") int page,
                                                          @Query("size") int size);
+
+    @POST("api/trips/generate")
+    Call<TripResponse> generateTrip(@Body GenerateTripRequest request);
+
+    /** Saved plans only, newest first. */
+    @GET("api/trips")
+    Call<PageResponse<TripSummaryResponse>> getSavedTrips(@Query("page") int page, @Query("size") int size);
+
+    @POST("api/trips/{tripId}/save")
+    Call<TripResponse> saveTrip(@Path("tripId") String tripId);
+
+    /** Discards a draft; a saved plan answers 409. */
+    @DELETE("api/trips/{tripId}")
+    Call<Void> deleteDraft(@Path("tripId") String tripId);
+
+    @GET("api/trips/{tripId}")
+    Call<TripResponse> getTrip(@Path("tripId") String tripId);
+
+    /** Places near the trip (nearest to that day's stops first) to add or swap in. */
+    @GET("api/trips/{tripId}/candidates")
+    Call<List<CandidateResponse>> getCandidates(@Path("tripId") String tripId, @Query("day") int day);
+
+    // Each edit re-plans the day on the server and returns the whole trip.
+    @POST("api/trips/{tripId}/stops")
+    Call<TripResponse> addStop(@Path("tripId") String tripId, @Body StopRequest request);
+
+    @PUT("api/trips/{tripId}/stops/{stopId}")
+    Call<TripResponse> replaceStop(@Path("tripId") String tripId, @Path("stopId") String stopId,
+                                   @Body StopRequest request);
+
+    @DELETE("api/trips/{tripId}/stops/{stopId}")
+    Call<TripResponse> removeStop(@Path("tripId") String tripId, @Path("stopId") String stopId);
 }

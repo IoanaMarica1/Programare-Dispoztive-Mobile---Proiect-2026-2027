@@ -54,6 +54,12 @@
     <string name="profile_preferences_empty_title">How do you like to travel?</string>
     <string name="profile_preferences_empty_body">Answer four quick questions and every plan will fit you.</string>
     <string name="profile_preferences_action">Set my preferences</string>
+    <string name="profile_adventures_title">My adventures</string>
+    <string name="profile_adventures_new">New</string>
+    <string name="profile_adventure_place">%1$s, %2$s</string>
+    <string name="profile_adventures_empty">Plans you save show up here, ready to open again.</string>
+    <string name="profile_adventures_load_failed">Could not load your adventures.</string>
+    <string name="profile_adventure_open_failed">Could not open this plan.</string>
     <string name="profile_countries_title">Visited countries</string>
     <string name="profile_history_empty_icon" translatable="false">🧭</string>
     <string name="profile_history_empty_title">No adventures yet</string>
@@ -99,6 +105,52 @@
     <string name="error_city_too_long">At most 50 characters</string>
     <string name="error_bio_too_long">At most 500 characters</string>
 
+    <!-- New adventure -->
+    <string name="adventure_title">Start a new adventure</string>
+    <string name="adventure_subtitle">Tell us where and when, we plan the rest</string>
+    <string name="hint_destination">Where are you going?</string>
+    <string name="hint_trip_dates">Trip dates</string>
+    <string name="adventure_rhythm">Daily rhythm</string>
+    <string name="adventure_rhythm_early">🌅 Early bird</string>
+    <string name="adventure_rhythm_standard">☀️ Standard</string>
+    <string name="adventure_rhythm_night">🌙 Night owl</string>
+    <string name="adventure_pace">Pace</string>
+    <string name="action_generate_plan">Generate plan</string>
+    <string name="error_destination_required">Enter a destination</string>
+    <string name="error_dates_required">Pick your trip dates</string>
+    <string name="error_trip_too_long">Trips can last at most 14 days</string>
+
+    <!-- Plan -->
+    <string name="plan_title">Your plan</string>
+    <string name="plan_save">Save</string>
+    <string name="plan_saved">Saved</string>
+    <string name="plan_saved_message">Saved to My adventures</string>
+    <string name="plan_save_failed">Could not save the plan (%1$d)</string>
+    <string name="plan_leave_title">Save this plan?</string>
+    <string name="plan_leave_message">If you discard it, you can change the destination, dates or pace and generate a new one. Your changes to this plan will be lost.</string>
+    <string name="plan_discard">Discard</string>
+    <string name="plan_day">Day %1$d</string>
+    <plurals name="plan_days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="plan_stops_count">
+        <item quantity="one">%d stop</item>
+        <item quantity="other">%d stops</item>
+    </plurals>
+    <string name="plan_day_empty">No stops planned for this day yet.</string>
+    <string name="plan_stop_meta">%1$d min</string>
+    <string name="plan_stop_meta_category">%1$d min · %2$s</string>
+    <string name="plan_stop_hours">Open: %1$s</string>
+    <string name="plan_leg">%1$d min walk · %2$s</string>
+    <string name="plan_swap">Swap</string>
+    <string name="plan_remove">Remove</string>
+    <string name="plan_add_stop">Add a stop</string>
+    <string name="plan_full_map">Full map</string>
+    <string name="plan_show_list">Show list</string>
+    <string name="plan_map_error">The map could not be loaded. Check your connection.</string>
+    <string name="plan_handle_description">Drag to resize the list and the map</string>
+
     <!-- Preference wizard -->
     <string name="wizard_step">Step %1$d of %2$d</string>
     <string name="wizard_optional">Optional</string>
@@ -139,9 +191,12 @@
         <item>🎭 Culture</item>
         <item>💰 Budget</item>
     </string-array>
+    <string name="pace_relaxed">🐢 Relaxed</string>
+    <string name="pace_balanced">⚖️ Balanced</string>
+    <string name="pace_packed">⚡ Packed</string>
     <string-array name="pace_labels">
-        <item>🐢 Relaxed</item>
-        <item>⚖️ Balanced</item>
-        <item>⚡ Packed</item>
+        <item>@string/pace_relaxed</item>
+        <item>@string/pace_balanced</item>
+        <item>@string/pace_packed</item>
     </string-array>
 </resources>

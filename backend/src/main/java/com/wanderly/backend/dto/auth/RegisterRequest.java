@@ -28,4 +28,10 @@ public record RegisterRequest(
         @Max(value = 100, message = "Invalid age.")
         Integer age
 ) {
+    // @Size counts characters; BCrypt's limit is 72 bytes, and letters like "ă" take two.
+    @AssertTrue(message = "Password is too long.")
+    public boolean isPasswordWithinBcryptLimit() {
+        return password == null
+                || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 72;
+    }
 }

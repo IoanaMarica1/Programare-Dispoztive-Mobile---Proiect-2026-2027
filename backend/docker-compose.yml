@@ -5,7 +5,8 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "5434:5432"
+      # Only reachable from this computer, not from the rest of the network.
+      - "127.0.0.1:5434:5432"
     volumes:
       - wanderly-data:/var/lib/postgresql/data
 

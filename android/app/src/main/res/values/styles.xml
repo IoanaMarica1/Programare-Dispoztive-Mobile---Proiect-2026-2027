@@ -12,6 +12,56 @@
         <item name="cornerRadius">@dimen/radius_button</item>
     </style>
 
+    <!-- Secondary action on a light card, such as "Add a stop" -->
+    <style name="Widget.Wanderly.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton.Icon">
+        <item name="android:textColor">@color/text_link</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_button</item>
+        <item name="iconTint">@color/text_link</item>
+        <item name="strokeColor">@color/text_link</item>
+    </style>
+
+    <!-- Swap and Remove on a stop card; each one sets its own colour -->
+    <style name="Widget.Wanderly.Button.StopAction" parent="Widget.Material3.Button.TextButton.Icon">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconSize">18dp</item>
+    </style>
+
+    <!-- Save on the plan's top bar; looks done once the plan is saved -->
+    <style name="Widget.Wanderly.Button.Save" parent="Widget.Material3.Button.Icon">
+        <item name="backgroundTint">@color/save_button_background</item>
+        <item name="android:textColor">@color/save_button_content</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_input</item>
+        <item name="iconSize">18dp</item>
+        <item name="iconTint">@color/save_button_content</item>
+    </style>
+
+    <!-- Floats over the map -->
+    <style name="Widget.Wanderly.Button.Map" parent="Widget.Material3.Button.ElevatedButton.Icon">
+        <item name="backgroundTint">@color/surface_card</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_input</item>
+        <item name="iconSize">18dp</item>
+        <item name="iconTint">@color/text_link</item>
+    </style>
+
     <style name="Widget.Wanderly.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxCornerRadiusTopStart">@dimen/radius_input</item>
         <item name="boxCornerRadiusTopEnd">@dimen/radius_input</item>
@@ -53,6 +103,15 @@
         <item name="chipEndPadding">@dimen/space_s</item>
         <item name="android:textAppearance">@style/TextAppearance.Wanderly.Chip</item>
         <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Picks the day on the plan; the selected day stands out strongly -->
+    <style name="Widget.Wanderly.Chip.Day" parent="Widget.Wanderly.Chip.Choice">
+        <item name="chipBackgroundColor">@color/chip_day_background</item>
+        <item name="chipStrokeColor">@color/chip_day_stroke</item>
+        <item name="chipMinHeight">40dp</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="android:textColor">@color/chip_day_text</item>
     </style>
 
     <!-- Read-only chip that shows a saved preference on the profile -->

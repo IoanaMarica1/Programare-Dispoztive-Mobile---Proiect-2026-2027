@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 @Service
@@ -24,9 +25,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    /** BCrypt only hashes the first 72 bytes, and Spring Security rejects longer passwords outright. */
+    public static final int MAX_PASSWORD_BYTES = 72;
+
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
-        String email = request.email();
+        String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -47,14 +51,21 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthenticationResponse login(LoginRequest request) {
-        String email = request.email();
+        String email = normalizeEmail(request.email());
+        // No account can have a longer password, and BCrypt would throw on it.
+        boolean tooLong = request.password().getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES;
 
         User user = userRepository.findByEmail(email)
-                .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
+                .filter(u -> !tooLong && passwordEncoder.matches(request.password(), u.getPasswordHash()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                         "Incorrect email or password."));
 
         return buildResponse(user);
+    }
+
+    // Emails are stored lower-case, so "Ana@Mail.com" and "ana@mail.com" are one account.
+    static String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private AuthenticationResponse buildResponse(User user) {

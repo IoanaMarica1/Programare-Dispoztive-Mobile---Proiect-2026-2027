@@ -20,4 +20,6 @@
     <dimen name="chip_height">52dp</dimen>
     <dimen name="progress_thickness">8dp</dimen>
     <dimen name="hero_height">260dp</dimen>
+    <dimen name="plan_hero_height">96dp</dimen>
+    <dimen name="stop_number_size">32dp</dimen>
 </resources>
