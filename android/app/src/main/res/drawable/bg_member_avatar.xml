@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small avatar in a stack: the fill is tinted per traveller, the white ring separates overlapping ones -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/teal_500" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/white" />
+</shape>

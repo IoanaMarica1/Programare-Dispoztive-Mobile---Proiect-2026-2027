@@ -30,6 +30,9 @@ import com.wanderly.data.remote.dto.StopRequest;
 import com.wanderly.data.remote.dto.TripResponse;
 import com.wanderly.ui.common.Formats;
 import com.wanderly.ui.common.Session;
+import com.wanderly.data.remote.dto.RegenerateTripRequest;
+import com.wanderly.ui.common.Dialogs;
+import com.wanderly.ui.group.GroupPlanViews;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -151,6 +154,12 @@ public class PlanActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.planTitle)).setText(trip.destination);
         ((TextView) findViewById(R.id.planSubtitle)).setText(Formats.dateRange(trip.startDate, trip.endDate));
         findViewById(R.id.addStopButton).setOnClickListener(v -> addStop(selectedDay));
+        // D1: a member sees someone else's group trip read-only.
+        if (!trip.owner) {
+            saveButton.setVisibility(View.GONE);
+            findViewById(R.id.addStopButton).setVisibility(View.GONE);
+        }
+        bindGroup();
 
         groupStops();
         dayCount = countDays();
@@ -316,6 +325,8 @@ public class PlanActivity extends AppCompatActivity {
                         : getString(R.string.plan_stop_hours, s.openingHours));
         card.findViewById(R.id.stopSwap).setOnClickListener(v -> swapStop(s));
         card.findViewById(R.id.stopRemove).setOnClickListener(v -> removeStop(s));
+        card.findViewById(R.id.stopActions).setVisibility(trip.owner ? View.VISIBLE : View.GONE);
+        GroupPlanViews.bindSuits(trip, s, card);
 
         rowViews.put(s.id, card);
         return card;
@@ -408,7 +419,7 @@ public class PlanActivity extends AppCompatActivity {
 
     /** A saved plan just closes; a draft asks first, because discarding it deletes it. */
     private void leavePlan() {
-        if (trip.saved) {
+        if (trip.saved || !trip.owner) {
             finish();
             return;
         }
@@ -514,6 +525,7 @@ public class PlanActivity extends AppCompatActivity {
                     trip = response.body();
                     groupStops();
                     showDay(selectedDay);
+                    bindGroup();  // who each stop suits, and so the fairness, may have changed
                 } else if (response.code() == 401) {
                     Session.expire(PlanActivity.this);
                 } else {
@@ -526,6 +538,99 @@ public class PlanActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<TripResponse> c, @NonNull Throwable t) {
                 busy = false;
                 if (!isDestroyed()) showError("Network error");
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------ group trips (D1)
+
+    private void bindGroup() {
+        GroupPlanViews.bindCard(this, trip, findViewById(R.id.groupCard), () ->
+                GroupPlanViews.showMembersSheet(this, trip, this::confirmRegenerate, this::confirmLeave));
+    }
+
+    private void confirmRegenerate() {
+        if (busy) return;
+        Dialogs.info(this, R.drawable.ic_refresh, getString(R.string.plan_regenerate_title),
+                        getString(trip.saved ? R.string.plan_regenerate_saved : R.string.plan_regenerate_draft))
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.plan_regenerate_action, (d, w) -> regenerate())
+                .show();
+    }
+
+    /** Plans the same trip again for the same people; the new plan opens in place of this one. */
+    private void regenerate() {
+        if (busy) return;
+        busy = true;
+        androidx.appcompat.app.AlertDialog progress = Dialogs.showProgress(this,
+                getString(R.string.plan_regenerating), getString(R.string.plan_regenerating_body));
+        api().regenerateTrip(trip.id, new RegenerateTripRequest(null)).enqueue(new Callback<TripResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<TripResponse> c, @NonNull Response<TripResponse> response) {
+                busy = false;
+                if (isDestroyed()) return;
+                progress.dismiss();
+                if (response.isSuccessful() && response.body() != null) {
+                    android.content.Intent next = new android.content.Intent(PlanActivity.this, PlanActivity.class);
+                    next.putExtra("trip", new Gson().toJson(response.body()));
+                    startActivity(next);
+                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                    finish();
+                } else if (response.code() == 401) {
+                    Session.expire(PlanActivity.this);
+                } else if (response.code() >= 500 || response.code() == 429) {
+                    Dialogs.error(PlanActivity.this, R.drawable.ic_error, getString(R.string.dialog_plan_failed_title),
+                                    getString(R.string.dialog_plan_failed_busy))
+                            .setNegativeButton(R.string.action_cancel, null)
+                            .setPositiveButton(R.string.action_retry, (d, w) -> regenerate())
+                            .show();
+                } else {
+                    Dialogs.showError(PlanActivity.this, getString(R.string.dialog_plan_failed_title),
+                            ApiClient.errorMessage(response, getString(R.string.dialog_plan_failed_busy)));
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TripResponse> c, @NonNull Throwable t) {
+                busy = false;
+                if (isDestroyed()) return;
+                progress.dismiss();
+                Dialogs.showNetworkError(PlanActivity.this, PlanActivity.this::regenerate);
+            }
+        });
+    }
+
+    private void confirmLeave() {
+        Dialogs.error(this, R.drawable.ic_exit, getString(R.string.plan_leave_trip_title),
+                        getString(R.string.plan_leave_trip_message))
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.plan_leave_trip_action, (d, w) -> leaveTrip())
+                .show();
+    }
+
+    private void leaveTrip() {
+        if (busy) return;
+        busy = true;
+        api().leaveTrip(trip.id).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> c, @NonNull Response<Void> response) {
+                busy = false;
+                if (isDestroyed()) return;
+                if (response.isSuccessful()) {
+                    Toast.makeText(PlanActivity.this, R.string.plan_left_trip, Toast.LENGTH_SHORT).show();
+                    finish();
+                } else if (response.code() == 401) {
+                    Session.expire(PlanActivity.this);
+                } else {
+                    Dialogs.showError(PlanActivity.this, getString(R.string.plan_leave_failed_title),
+                            ApiClient.errorMessage(response, getString(R.string.dialog_generic_title)));
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Void> c, @NonNull Throwable t) {
+                busy = false;
+                if (!isDestroyed()) Dialogs.showNetworkError(PlanActivity.this, PlanActivity.this::leaveTrip);
             }
         });
     }

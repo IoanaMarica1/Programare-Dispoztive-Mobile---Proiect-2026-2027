@@ -32,4 +32,25 @@
     <color name="rank_badge_text">@color/white</color>
     <color name="progress_indicator">@color/teal_500</color>
     <color name="progress_track">#1A0E6E7A</color>
+
+    <!-- Group trips: one colour per traveller (organiser first), on avatars and stop tags -->
+    <color name="error">#C8463B</color>
+    <color name="member_1">@color/teal_500</color>
+    <color name="member_2">@color/sunset_500</color>
+    <color name="member_3">#7B5BD6</color>
+    <color name="member_4">#D9487A</color>
+    <color name="member_5">#3E9B5B</color>
+    <color name="member_6">#C98A12</color>
+    <color name="member_7">@color/ocean_700</color>
+    <color name="member_8">#5B6B75</color>
+    <array name="member_colors">
+        <item>@color/member_1</item>
+        <item>@color/member_2</item>
+        <item>@color/member_3</item>
+        <item>@color/member_4</item>
+        <item>@color/member_5</item>
+        <item>@color/member_6</item>
+        <item>@color/member_7</item>
+        <item>@color/member_8</item>
+    </array>
 </resources>

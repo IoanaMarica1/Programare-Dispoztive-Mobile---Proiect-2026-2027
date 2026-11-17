@@ -11,6 +11,7 @@ import com.wanderly.backend.dto.trip.TripSummaryResponse;
 import com.wanderly.backend.model.Pace;
 import org.springframework.data.domain.Pageable;
 import com.wanderly.backend.model.Trip;
+import com.wanderly.backend.model.TripMember;
 import com.wanderly.backend.model.TripStop;
 import com.wanderly.backend.model.User;
 import com.wanderly.backend.repository.TripRepository;
@@ -38,6 +39,7 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
@@ -86,7 +88,7 @@ public class TripService {
     static final int MAX_SHORTLIST = 100;
 
     /** Which place categories suit each interest. Food places are always offered too, for meals. */
-    private static final Map<Interest, Set<String>> CATEGORIES = Map.of(
+    static final Map<Interest, Set<String>> CATEGORIES = Map.of(
             Interest.HISTORY, Set.of("Museum", "Historical", "Landmark"),
             Interest.ART, Set.of("Art", "Museum"),
             Interest.NATURE, Set.of("Nature"),
@@ -130,14 +132,29 @@ public class TripService {
      * database connection checked out the whole time. Each repository call runs in its own short transaction.
      */
     public TripResponse generate(String email, GenerateTripRequest req) {
+        User user = userService.getByEmail(email);
+        var prefs = preferencesService.getPreferences(email).orElse(null);
+        Travellers solo = prefs == null
+                ? new Travellers(Set.of(), Set.of(), "Travel mode: solo.", "")
+                : new Travellers(prefs.interests(), prefs.paces(),
+                        "Travel mode: " + prefs.travelModes() + ".", "");
+        return generate(user, req, solo, List.of());
+    }
+
+    /**
+     * Who the plan is for. {@code who} and {@code extraRules} go into the prompt as they are;
+     * {@code interests} is ordered most important first.
+     */
+    record Travellers(Collection<Interest> interests, Set<Pace> paces, String who, String extraRules) {}
+
+    /** Shared by solo and group trips; {@code members} is empty for a solo trip. */
+    TripResponse generate(User user, GenerateTripRequest req, Travellers travellers, List<TripMember> members) {
         Instant began = Instant.now();
         Instant deadline = began.plus(TIME_BUDGET);
-        User user = userService.getByEmail(email);
         int days = req.days();
         String destination = req.destination().trim();
         String country = req.country() == null || req.country().isBlank() ? null : req.country().trim();
-        var prefs = preferencesService.getPreferences(email).orElse(null);
-        Set<Pace> paces = chosenPaces(req.pace(), prefs == null ? Set.of() : prefs.paces());
+        Set<Pace> paces = chosenPaces(req.pace(), travellers.paces());
         int perDay = stopsPerDay(paces);
 
         // 1. Real places for this city (each search is cached once it succeeds), shortlisted for Gemini.
@@ -148,7 +165,7 @@ public class TripService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "No places found for " + destination);
         }
-        List<Place> places = shortlist(found, prefs == null ? Set.of() : prefs.interests(), days, perDay);
+        List<Place> places = shortlist(found, Set.copyOf(travellers.interests()), days, perDay);
         Map<Integer, Place> byId = places.stream().collect(Collectors.toMap(Place::id, Function.identity()));
         String list = places.stream()
                 .map(p -> p.id() + ". " + p.name() + " (" + p.category() + ")"
@@ -156,14 +173,14 @@ public class TripService {
                 .collect(Collectors.joining("\n"));
         Instant placesDone = Instant.now();
 
-        String interests = prefs == null ? "general sightseeing" : prefs.interests().toString();
+        String interests = travellers.interests().isEmpty()
+                ? "general sightseeing" : travellers.interests().toString();
         // Pace is an optional wizard step, so it may be empty.
         String pace = paces.isEmpty() ? "balanced" : paces.toString();
-        String modes = prefs == null ? "solo" : prefs.travelModes().toString();
 
         String prompt = """
                 You are a travel planner. Plan a %d-day trip to %s starting on %s (day 1 is a %s).
-                Daily window: %s to %s. Travel mode: %s. Interests: %s. Pace: %s
+                Daily window: %s to %s. %s Interests: %s. Pace: %s
                 (relaxed = 3 stops/day, balanced = 4-5, packed = 6-7). Every day needs stops.
                 Choose ONLY from these real places (use their id):
                 %s
@@ -176,10 +193,10 @@ public class TripService {
                 - "durationMinutes" is a realistic visit length between %d and %d.
                 - Never use the same id twice.
                 - "description": one short sentence (max 120 characters) on why it's worth visiting.
-                Return ONLY JSON: {"stops":[{"day":1,"id":12,"start":"HH:mm","durationMinutes":60,"description":"..."}]}
+                %sReturn ONLY JSON: {"stops":[{"day":1,"id":12,"start":"HH:mm","durationMinutes":60,"description":"..."}]}
                 """.formatted(days, destination, req.startDate(), req.startDate().getDayOfWeek(),
-                req.dayStart(), req.dayEnd(), modes, interests, pace, list,
-                MIN_STOP_MINUTES, MAX_STOP_MINUTES);
+                req.dayStart(), req.dayEnd(), travellers.who(), interests, pace, list,
+                MIN_STOP_MINUTES, MAX_STOP_MINUTES, travellers.extraRules());
 
         // 2. Gemini picks and roughly schedules them.
         String answer;
@@ -215,6 +232,7 @@ public class TripService {
                 .dayStart(req.dayStart())
                 .dayEnd(req.dayEnd())
                 .build();
+        members.forEach(trip::addMember);
         for (PlannedStop p : plan) {
             trip.addStop(TripStop.builder()
                     .dayNumber(p.day()).position(p.position())
@@ -228,8 +246,8 @@ public class TripService {
         }
         updateCenter(trip);
 
-        log.info("Plan for {} days: places {} ms ({} found, {} sent), gemini {} ms, {} stops from the model, {} planned",
-                days, Duration.between(began, placesDone).toMillis(), found.size(), places.size(),
+        log.info("Plan for {} days, {} people: places {} ms ({} found, {} sent), gemini {} ms, {} stops from the model, {} planned",
+                days, Math.max(1, members.size()), Duration.between(began, placesDone).toMillis(), found.size(), places.size(),
                 Duration.between(placesDone, geminiDone).toMillis(), aiStops.size(), plan.size());
 
         Trip saved = tripRepository.save(trip);
@@ -475,16 +493,26 @@ public class TripService {
 
     // ---------------------------------------------------------------- reading and editing a trip
 
+    /**
+     * The organiser gets their trip (draft or saved). A member of a saved group trip gets it read-only
+     * ({@code owner} false). Anyone else gets 404, as if it didn't exist.
+     */
     @Transactional(readOnly = true)
     public TripResponse getTrip(String email, UUID tripId) {
-        return toResponse(load(email, tripId));
+        Optional<Trip> own = tripRepository.findByPublicIdAndUserEmail(tripId, email);
+        if (own.isPresent()) return toResponse(own.get(), true);
+        return tripRepository.findSavedForMember(tripId, email)
+                .map(t -> toResponse(t, false))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found"));
     }
 
+    /** The user's saved trips and the saved group trips they're on, newest first. */
     @Transactional(readOnly = true)
     public PageResponse<TripSummaryResponse> savedTrips(String email, Pageable pageable) {
-        return PageResponse.from(tripRepository.findByUserEmailAndSavedTrue(email, pageable),
+        return PageResponse.from(tripRepository.findSavedVisibleTo(email, pageable),
                 t -> new TripSummaryResponse(t.getPublicId(), t.getDestination(), t.getCountry(),
-                        t.getStartDate(), t.getEndDate()));
+                        t.getStartDate(), t.getEndDate(), t.getUser().getEmail().equals(email),
+                        t.getUser().getName()));
     }
 
     /** Keeps the plan. Saving twice changes nothing. */
@@ -583,7 +611,8 @@ public class TripService {
                 .toList();
     }
 
-    private Trip load(String email, UUID tripId) {
+    /** The owner's trip with its stops (members are lazy: read them in a transaction or by query). */
+    Trip load(String email, UUID tripId) {
         return tripRepository.findByPublicIdAndUserEmail(tripId, email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found"));
     }
@@ -687,16 +716,46 @@ public class TripService {
         return s.length() > 300 ? s.substring(0, 297) + "..." : s;
     }
 
-    private TripResponse toResponse(Trip t) {
-        List<TripResponse.StopResponse> stops = t.getStops().stream()
-                .sorted(Comparator.comparingInt(TripStop::getDayNumber).thenComparingInt(TripStop::getPosition))
-                .map(s -> new TripResponse.StopResponse(
-                        s.getPublicId(), s.getDayNumber(), s.getPosition(), s.getName(), s.getCategory(),
-                        s.getLatitude(), s.getLongitude(), s.getStartTime(), s.getDurationMinutes(),
-                        s.getDescription(), s.getOpeningHours()))
+    /** For the organiser: every endpoint that returns a trip, except a member's read-only view. */
+    static TripResponse toResponse(Trip t) {
+        return toResponse(t, true);
+    }
+
+    /** Must run in a transaction (or on a trip built in memory): it reads the lazy members and owner. */
+    static TripResponse toResponse(Trip t, boolean owner) {
+        List<GroupPreferences.Member> group = t.getMembers().stream()
+                .map(m -> new GroupPreferences.Member(m.getPublicId(), m.getName(), m.getInterests(),
+                        m.getPriorities(), m.getPaces()))
                 .toList();
+        Map<UUID, Integer> matched = new LinkedHashMap<>();
+        group.forEach(m -> matched.put(m.id(), 0));
+
+        List<TripResponse.StopResponse> stops = new ArrayList<>();
+        for (TripStop s : t.getStops().stream()
+                .sorted(Comparator.comparingInt(TripStop::getDayNumber).thenComparingInt(TripStop::getPosition))
+                .toList()) {
+            List<UUID> suitedTo = GroupPreferences.suitedMembers(s.getCategory(), group, CATEGORIES);
+            suitedTo.forEach(id -> matched.merge(id, 1, Integer::sum));
+            stops.add(new TripResponse.StopResponse(
+                    s.getPublicId(), s.getDayNumber(), s.getPosition(), s.getName(), s.getCategory(),
+                    s.getLatitude(), s.getLongitude(), s.getStartTime(), s.getDurationMinutes(),
+                    s.getDescription(), s.getOpeningHours(),
+                    suitedTo, group.isEmpty() ? null : (double) suitedTo.size() / group.size()));
+        }
+
+        List<TripResponse.MemberResponse> members = t.getMembers().stream()
+                .map(m -> new TripResponse.MemberResponse(
+                        m.getPublicId(), m.getName(),
+                        m.getUser() == null ? null : m.getUser().getPublicId(),
+                        m.getUser() == null ? null : m.getUser().getProfilePicture(),
+                        m.getUser() == null ? Set.copyOf(m.getInterests()) : null,
+                        matched.get(m.getPublicId())))
+                .toList();
+        Double fairness = group.isEmpty() ? null : GroupPreferences.fairness(matched, stops.size());
+
         return new TripResponse(t.getPublicId(), t.getDestination(), t.getCountry(),
                 t.getLatitude(), t.getLongitude(), t.getStartDate(), t.getEndDate(),
-                t.getDayStart(), t.getDayEnd(), t.isSaved(), stops);
+                t.getDayStart(), t.getDayEnd(), t.isSaved(), stops, members, fairness,
+                owner, t.getUser() == null ? null : t.getUser().getName());
     }
 }

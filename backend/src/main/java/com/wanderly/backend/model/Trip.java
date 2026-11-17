@@ -75,6 +75,12 @@ public class Trip {
     @Getter
     private List<TripStop> stops = new ArrayList<>();
 
+    // Empty for a solo trip. Lazy: read inside a transaction (or right after generation, in memory).
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC")
+    @Getter
+    private List<TripMember> members = new ArrayList<>();
+
     @Builder
     public Trip(User user, String destination, String country, Double latitude, Double longitude,
                 LocalDate startDate, LocalDate endDate, LocalTime dayStart, LocalTime dayEnd) {
@@ -92,6 +98,15 @@ public class Trip {
     public void addStop(TripStop stop) {
         stop.setTrip(this);
         stops.add(stop);
+    }
+
+    public void addMember(TripMember member) {
+        member.setTrip(this);
+        members.add(member);
+    }
+
+    public boolean isGroup() {
+        return !members.isEmpty();
     }
 
     // orphanRemoval deletes the row.

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.ApiService;
+import com.wanderly.data.remote.dto.GenerateGroupTripRequest;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
 import com.wanderly.data.remote.dto.TripResponse;
 
@@ -26,13 +27,15 @@ public class GenerateTripViewModel extends ViewModel {
         public final int code;          // HTTP status, 0 for a network error
         public final String message;
         public final GenerateTripRequest request;
+        public final boolean group;
         private boolean consumed;
 
-        Outcome(TripResponse trip, int code, String message, GenerateTripRequest request) {
+        Outcome(TripResponse trip, int code, String message, GenerateTripRequest request, boolean group) {
             this.trip = trip;
             this.code = code;
             this.message = message;
             this.request = request;
+            this.group = group;
         }
 
         /** True the first time only. */
@@ -56,18 +59,27 @@ public class GenerateTripViewModel extends ViewModel {
     }
 
     public void generate(ApiService api, GenerateTripRequest request) {
+        run(api.generateTrip(request), request, false);
+    }
+
+    /** D1: one plan for the organiser and their friends. */
+    public void generateGroup(ApiService api, GenerateGroupTripRequest request) {
+        run(api.generateGroupTrip(request), request.trip, true);
+    }
+
+    private void run(Call<TripResponse> newCall, GenerateTripRequest request, boolean group) {
         if (Boolean.TRUE.equals(loading.getValue())) return;  // one plan at a time
         loading.setValue(true);
-        call = api.generateTrip(request);
+        call = newCall;
         call.enqueue(new Callback<TripResponse>() {
             @Override
             public void onResponse(@NonNull Call<TripResponse> c, @NonNull Response<TripResponse> response) {
                 loading.setValue(false);
                 if (response.isSuccessful() && response.body() != null) {
-                    outcome.setValue(new Outcome(response.body(), response.code(), null, request));
+                    outcome.setValue(new Outcome(response.body(), response.code(), null, request, group));
                 } else {
                     outcome.setValue(new Outcome(null, response.code(), ApiClient.errorMessage(response,
-                            "Could not generate plan (" + response.code() + ")"), request));
+                            "Could not generate plan (" + response.code() + ")"), request, group));
                 }
             }
 
@@ -75,7 +87,7 @@ public class GenerateTripViewModel extends ViewModel {
             public void onFailure(@NonNull Call<TripResponse> c, @NonNull Throwable t) {
                 loading.setValue(false);
                 if (c.isCanceled()) return;
-                outcome.setValue(new Outcome(null, 0, "Network error", request));
+                outcome.setValue(new Outcome(null, 0, "Network error", request, group));
             }
         });
     }
