@@ -193,6 +193,7 @@
     <string name="travellers_removed">%1$s removed</string>
     <string name="action_undo">Undo</string>
     <string name="travellers_remove_description">Remove %1$s</string>
+    <string name="action_remove_traveller">Remove traveller</string>
 
     <!-- Group trips: add a traveller sheet -->
     <string name="add_traveller_title">Add a traveller</string>
@@ -247,7 +248,6 @@
     <string name="plan_group_everyone">👥 Great for everyone</string>
     <string name="plan_group_suits">Great for</string>
     <string name="plan_group_regenerate">New plan for the group</string>
-    <string name="plan_regenerate">New plan</string>
     <string name="plan_group_leave">Leave this trip</string>
     <string name="plan_regenerate_title">Get a new plan?</string>
     <string name="plan_regenerate_draft">We\'ll plan again with everyone\'s latest preferences. This draft and your changes to it will be replaced.</string>
