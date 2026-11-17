@@ -372,18 +372,6 @@
                 android:text="@string/profile_adventures_title"
                 android:textAppearance="@style/TextAppearance.Wanderly.Section" />
 
-            <!-- D1: straight to "Who's coming?" -->
-            <TextView
-                android:id="@+id/groupAdventureLink"
-                style="@style/Widget.Wanderly.Link"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:drawablePadding="4dp"
-                android:gravity="center_vertical"
-                android:text="@string/profile_adventures_group"
-                app:drawableStartCompat="@drawable/ic_group"
-                app:drawableTint="@color/text_link" />
-
             <TextView
                 android:id="@+id/newAdventureLink"
                 style="@style/Widget.Wanderly.Link"

@@ -99,10 +99,7 @@ public class ProfileActivity extends AppCompatActivity {
         findViewById(R.id.startFirstAdventureButton).setOnClickListener(v ->
                 startActivity(new Intent(this, AdventureActivity.class)));
         findViewById(R.id.newAdventureLink).setOnClickListener(v ->
-                startActivity(new Intent(this, AdventureActivity.class)));
-        findViewById(R.id.groupAdventureLink).setOnClickListener(v ->
-                startActivity(new Intent(this, AdventureActivity.class).putExtra(AdventureActivity.EXTRA_GROUP, true)));
-        showMoreAdventuresButton.setOnClickListener(v -> loadAdventures(false));
+                startActivity(new Intent(this, AdventureActivity.class)));        showMoreAdventuresButton.setOnClickListener(v -> loadAdventures(false));
         editPreferencesLink.setOnClickListener(v -> openPreferences());
         showMoreCountriesButton.setOnClickListener(v -> loadCountries(false));
         findViewById(R.id.logoutButton).setOnClickListener(v -> logout());

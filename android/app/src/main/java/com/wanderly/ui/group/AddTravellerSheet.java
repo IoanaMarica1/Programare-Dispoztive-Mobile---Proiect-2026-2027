@@ -111,10 +111,10 @@ final class AddTravellerSheet {
             if (checked) showMode(id == R.id.modeWanderly);
         });
 
-        emailLayout.setEndIconOnClickListener(v -> find());
+        emailLayout.setEndIconOnClickListener(v -> find(false));
         emailInput.setOnEditorActionListener((v, action, e) -> {
             if (action != EditorInfo.IME_ACTION_SEARCH) return false;
-            find();
+            find(false);
             return true;
         });
         emailInput.addTextChangedListener(new SimpleWatcher(() -> emailLayout.setError(null)));
@@ -180,7 +180,11 @@ final class AddTravellerSheet {
 
     // ------------------------------------------------------------------ lookup
 
-    private void find() {
+    /**
+     * Looks the email up. With {@code addWhenFound} (the main button was tapped before the search),
+     * someone whose saved preferences can be used joins straight away.
+     */
+    private void find(boolean addWhenFound) {
         String email = text(emailInput).toLowerCase(Locale.ROOT);
         if (email.isEmpty()) {
             emailLayout.setError(activity.getString(R.string.error_email_required));
@@ -216,6 +220,7 @@ final class AddTravellerSheet {
                         }
                     }
                     showFound(body, email);
+                    if (addWhenFound && body.hasPreferences) submit();
                 } else if (response.code() == 404) {
                     showNotFound(email);
                 } else if (response.code() == 400) {
@@ -236,7 +241,7 @@ final class AddTravellerSheet {
             public void onFailure(@NonNull Call<TravellerLookupResponse> call, @NonNull Throwable t) {
                 if (call.isCanceled() || !dialog.isShowing()) return;
                 setLookingUp(false);
-                Dialogs.showNetworkError(activity, AddTravellerSheet.this::find);
+                Dialogs.showNetworkError(activity, () -> find(addWhenFound));
             }
         });
     }
@@ -294,9 +299,7 @@ final class AddTravellerSheet {
         Traveller t = new Traveller();
         if (wanderlyMode()) {
             if (found == null) {
-                emailLayout.setError(activity.getString(text(emailInput).isEmpty()
-                        ? R.string.error_email_required : R.string.error_find_first));
-                shake(emailLayout);
+                find(true);  // no need to tap the magnifier first
                 return;
             }
             t.userId = found.userId;

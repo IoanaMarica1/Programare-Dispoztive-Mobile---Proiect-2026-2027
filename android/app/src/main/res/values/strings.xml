@@ -172,7 +172,6 @@
         <item quantity="other">%d friends</item>
     </plurals>
     <string name="action_generate_group_plan">Generate group plan</string>
-    <string name="profile_adventures_group">With friends</string>
     <string name="profile_adventure_group_by">%1$s · by %2$s</string>
 
     <!-- Group trips: who's coming -->
@@ -215,7 +214,6 @@
     <string name="add_traveller_save">Save changes</string>
     <string name="error_email_required">Enter their email</string>
     <string name="error_email_invalid">This doesn\'t look like an email</string>
-    <string name="error_find_first">Tap Find to look them up first</string>
     <string name="error_interests_required">Pick at least one interest</string>
 
     <!-- Group trips: error dialogs -->

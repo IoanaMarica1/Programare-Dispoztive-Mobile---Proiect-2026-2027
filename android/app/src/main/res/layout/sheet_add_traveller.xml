@@ -73,6 +73,7 @@
                 app:endIconDrawable="@drawable/ic_search"
                 app:endIconMode="custom"
                 app:endIconTint="@color/text_link"
+                app:errorIconDrawable="@null"
                 app:startIconDrawable="@drawable/ic_mail">
 
                 <com.google.android.material.textfield.TextInputEditText

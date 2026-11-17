@@ -86,9 +86,6 @@ public class AdventureActivity extends AppCompatActivity {
             showTravellers();
         });
         showTravellers();
-        if (savedInstanceState == null && getIntent().getBooleanExtra(EXTRA_GROUP, false)) {
-            openTravellers();
-        }
 
         destinationLayout = findViewById(R.id.destinationLayout);
         datesLayout = findViewById(R.id.datesLayout);
@@ -174,8 +171,6 @@ public class AdventureActivity extends AppCompatActivity {
 
     // ------------------------------------------------------------------ D1: group trips
 
-    /** Opens the screen that starts in group mode, e.g. from the profile's "With friends" link. */
-    public static final String EXTRA_GROUP = "group";
     private static final String STATE_TRAVELLERS = "travellers";
 
     private final java.util.List<Traveller> travellers = new java.util.ArrayList<>();
