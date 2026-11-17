@@ -56,6 +56,10 @@
 
         <activity android:name=".ui.adventure.PlanActivity" />
 
+        <activity
+            android:name=".ui.group.TravellersActivity"
+            android:windowSoftInputMode="adjustResize" />
+
 
     </application>
 
