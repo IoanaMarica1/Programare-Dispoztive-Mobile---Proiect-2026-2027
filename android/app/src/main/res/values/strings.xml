@@ -151,6 +151,116 @@
     <string name="plan_map_error">The map could not be loaded. Check your connection.</string>
     <string name="plan_handle_description">Drag to resize the list and the map</string>
 
+    <!-- Dialogs -->
+    <string name="action_ok">Got it</string>
+    <string name="action_retry">Try again</string>
+    <string name="dialog_network_title">Can\'t reach Wanderly</string>
+    <string name="dialog_network_message">Check your internet connection and try again.</string>
+    <string name="dialog_plan_failed_title">We couldn\'t plan this trip</string>
+    <string name="dialog_plan_failed_busy">Our trip planner is busy right now. Give it a moment and try again.</string>
+    <string name="dialog_plan_invalid_title">Something needs a fix</string>
+    <string name="dialog_generic_title">Something went wrong</string>
+
+    <!-- Group trips: entry points -->
+    <string name="group_entry_title">Travelling with friends?</string>
+    <string name="group_entry_subtitle">Plan one trip that suits everyone</string>
+    <string name="group_entry_people">You + %1$s</string>
+    <string name="group_entry_edit">Tap to change who\'s coming</string>
+    <string name="group_entry_clear">Plan just for me</string>
+    <plurals name="group_friends">
+        <item quantity="one">%d friend</item>
+        <item quantity="other">%d friends</item>
+    </plurals>
+    <string name="action_generate_group_plan">Generate group plan</string>
+    <string name="profile_adventure_group_by">%1$s · by %2$s</string>
+
+    <!-- Group trips: who's coming -->
+    <string name="travellers_title">Who\'s coming?</string>
+    <string name="travellers_subtitle">We mix everyone\'s tastes into one fair plan. Up to %1$d people, you included.</string>
+    <string name="travellers_count">%1$d / %2$d</string>
+    <string name="travellers_you">You</string>
+    <string name="travellers_you_subtitle">Organiser · your saved preferences</string>
+    <string name="travellers_you_missing">Set your preferences first</string>
+    <string name="travellers_on_wanderly">On Wanderly · their saved preferences</string>
+    <string name="travellers_on_wanderly_manual">On Wanderly · %1$s</string>
+    <string name="travellers_by_hand">Added by you · %1$s</string>
+    <string name="travellers_empty_title">Who are you travelling with?</string>
+    <string name="travellers_empty_body">Find friends by their Wanderly email, or add anyone by hand with what they love.</string>
+    <string name="travellers_add">Add a traveller</string>
+    <string name="travellers_done">Continue</string>
+    <string name="travellers_done_count">Continue with %1$d people</string>
+    <string name="travellers_swipe_hint">Swipe a traveller away to remove them</string>
+    <string name="travellers_removed">%1$s removed</string>
+    <string name="action_undo">Undo</string>
+    <string name="travellers_remove_description">Remove %1$s</string>
+    <string name="action_remove_traveller">Remove traveller</string>
+
+    <!-- Group trips: add a traveller sheet -->
+    <string name="add_traveller_title">Add a traveller</string>
+    <string name="edit_traveller_title">Edit %1$s</string>
+    <string name="add_traveller_tab_wanderly">On Wanderly</string>
+    <string name="add_traveller_tab_manual">Not on Wanderly</string>
+    <string name="add_traveller_email_hint">Their Wanderly email</string>
+    <string name="add_traveller_find">Find</string>
+    <string name="add_traveller_found_ready">Their saved preferences will be used</string>
+    <string name="add_traveller_found_no_prefs">Hasn\'t set preferences yet. Pick what they like below.</string>
+    <string name="add_traveller_change">Change</string>
+    <string name="add_traveller_name_hint">Their name</string>
+    <string name="add_traveller_interests">What do they love?</string>
+    <string name="add_traveller_more">Priorities and pace</string>
+    <string name="add_traveller_more_optional">Optional</string>
+    <string name="add_traveller_priorities">What matters to them?</string>
+    <string name="add_traveller_pace">How packed should their days be?</string>
+    <string name="add_traveller_submit">Add to the group</string>
+    <string name="add_traveller_save">Save changes</string>
+    <string name="error_email_required">Enter their email</string>
+    <string name="error_email_invalid">This doesn\'t look like an email</string>
+    <string name="error_interests_required">Pick at least one interest</string>
+
+    <!-- Group trips: error dialogs -->
+    <string name="dialog_not_found_title">Not on Wanderly yet</string>
+    <string name="dialog_not_found_message">Nobody uses %1$s on Wanderly. You can still add them by picking what they love.</string>
+    <string name="dialog_not_found_action">Add by hand</string>
+    <string name="dialog_not_found_other">Try another email</string>
+    <string name="dialog_self_title">That\'s you!</string>
+    <string name="dialog_self_message">You\'re already in the group as the organiser. Add the people travelling with you.</string>
+    <string name="dialog_duplicate_title">Already in the group</string>
+    <string name="dialog_duplicate_message">%1$s is already coming on this trip.</string>
+    <string name="dialog_full_title">The group is full</string>
+    <string name="dialog_full_message">A group trip has up to %1$d people, you included. Remove someone to add another traveller.</string>
+    <string name="dialog_own_prefs_title">Tell us how you travel</string>
+    <string name="dialog_own_prefs_message">Your preferences go into the group plan too. Answer four quick questions first.</string>
+    <string name="dialog_own_prefs_action">Set my preferences</string>
+    <string name="dialog_no_friends_title">Add someone first</string>
+    <string name="dialog_no_friends_message">A group trip needs at least one other traveller.</string>
+    <string name="dialog_group_failed_title">We couldn\'t plan for the group</string>
+    <string name="dialog_group_failed_edit">Edit the group</string>
+    <string name="action_not_now">Not now</string>
+
+    <!-- Group trips: plan screen -->
+    <string name="plan_group_title">Group of %1$d</string>
+    <string name="plan_group_by">Organised by %1$s · view only</string>
+    <string name="plan_group_fairness">Fairness %1$d%%</string>
+    <string name="plan_group_fairness_hint">Everyone gets at least %1$d%% of the stops picked for their tastes.</string>
+    <string name="plan_group_sheet_title">Your group</string>
+    <string name="plan_group_organiser">Organiser</string>
+    <string name="plan_group_matched">Suits %1$d of %2$d stops</string>
+    <string name="plan_group_everyone">👥 Great for everyone</string>
+    <string name="plan_group_suits">Great for</string>
+    <string name="plan_group_regenerate">New plan for the group</string>
+    <string name="plan_group_leave">Leave this trip</string>
+    <string name="plan_regenerate_title">Get a new plan?</string>
+    <string name="plan_regenerate_draft">We\'ll plan again with everyone\'s latest preferences. This draft and your changes to it will be replaced.</string>
+    <string name="plan_regenerate_saved">We\'ll plan again with everyone\'s latest preferences. Your saved plan stays in My adventures.</string>
+    <string name="plan_regenerate_action">Plan again</string>
+    <string name="plan_regenerating">Re-planning for everyone…</string>
+    <string name="plan_regenerating_body">This usually takes 20–40 seconds.</string>
+    <string name="plan_leave_trip_title">Leave this trip?</string>
+    <string name="plan_leave_trip_message">It disappears from your adventures. The plan doesn\'t change for anyone else.</string>
+    <string name="plan_leave_trip_action">Leave</string>
+    <string name="plan_left_trip">You left the trip</string>
+    <string name="plan_leave_failed_title">Couldn\'t leave the trip</string>
+
     <!-- Preference wizard -->
     <string name="wizard_step">Step %1$d of %2$d</string>
     <string name="wizard_optional">Optional</string>

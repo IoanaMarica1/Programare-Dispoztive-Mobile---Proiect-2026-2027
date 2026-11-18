@@ -102,8 +102,7 @@ public class ProfileActivity extends AppCompatActivity {
         findViewById(R.id.startFirstAdventureButton).setOnClickListener(v ->
                 startActivity(new Intent(this, AdventureActivity.class)));
         findViewById(R.id.newAdventureLink).setOnClickListener(v ->
-                startActivity(new Intent(this, AdventureActivity.class)));
-        showMoreAdventuresButton.setOnClickListener(v -> loadAdventures(false));
+                startActivity(new Intent(this, AdventureActivity.class)));        showMoreAdventuresButton.setOnClickListener(v -> loadAdventures(false));
         editPreferencesLink.setOnClickListener(v -> openPreferences());
         showMoreCountriesButton.setOnClickListener(v -> loadCountries(false));
         findViewById(R.id.logoutButton).setOnClickListener(v -> logout());
@@ -288,7 +287,10 @@ public class ProfileActivity extends AppCompatActivity {
         ((TextView) row.findViewById(R.id.rowIcon)).setText(Avatars.initialOf(trip.destination));
         ((TextView) row.findViewById(R.id.rowTitle)).setText(trip.country == null ? trip.destination
                 : getString(R.string.profile_adventure_place, trip.destination, trip.country));
-        ((TextView) row.findViewById(R.id.rowSubtitle)).setText(Formats.dateRange(trip.startDate, trip.endDate));
+        String dates = Formats.dateRange(trip.startDate, trip.endDate);
+        // D1: someone else's group trip says who organised it.
+        ((TextView) row.findViewById(R.id.rowSubtitle)).setText(trip.owner || trip.organiserName == null ? dates
+                : getString(R.string.profile_adventure_group_by, dates, trip.organiserName));
         row.setOnClickListener(v -> openAdventure(trip.id));
         return row;
     }

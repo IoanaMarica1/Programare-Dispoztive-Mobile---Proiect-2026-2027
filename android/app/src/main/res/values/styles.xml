@@ -105,6 +105,12 @@
         <item name="android:textColor">@color/text_primary</item>
     </style>
 
+    <!-- Smaller choice chip for the add-a-traveller sheet, where several questions share the screen -->
+    <style name="Widget.Wanderly.Chip.Choice.Small">
+        <item name="chipMinHeight">44dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <!-- Picks the day on the plan; the selected day stands out strongly -->
     <style name="Widget.Wanderly.Chip.Day" parent="Widget.Wanderly.Chip.Choice">
         <item name="chipBackgroundColor">@color/chip_day_background</item>
@@ -131,6 +137,62 @@
         <item name="trackCornerRadius">@dimen/space_xs</item>
         <item name="trackStopIndicatorSize">0dp</item>
         <item name="indicatorTrackGapSize">0dp</item>
+    </style>
+
+    <!-- Dialogs with a centred icon above the title (errors, confirmations) -->
+    <style name="ThemeOverlay.Wanderly.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog.Centered">
+        <item name="colorPrimary">@color/ocean_700</item>
+        <!-- Tints the icon above the title -->
+        <item name="colorSecondary">@color/teal_500</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Wanderly.Dialog</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.Wanderly.Dialog.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.Wanderly.Dialog.Button</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.Wanderly.Dialog.Button</item>
+    </style>
+
+    <!-- Same, for errors and destructive actions: the icon and the main button turn red -->
+    <style name="ThemeOverlay.Wanderly.Dialog.Error">
+        <item name="colorPrimary">@color/error</item>
+        <item name="colorSecondary">@color/error</item>
+    </style>
+
+    <style name="ShapeAppearance.Wanderly.Dialog" parent="">
+        <item name="cornerSize">@dimen/radius_card</item>
+    </style>
+
+    <style name="Widget.Wanderly.Dialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <!-- Bottom sheets with rounded top corners -->
+    <style name="ThemeOverlay.Wanderly.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Wanderly.BottomSheet</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+    </style>
+
+    <style name="Widget.Wanderly.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">@color/surface_card</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Wanderly.BottomSheet</item>
+    </style>
+
+    <style name="ShapeAppearance.Wanderly.BottomSheet" parent="">
+        <item name="cornerSizeTopLeft">@dimen/radius_card</item>
+        <item name="cornerSizeTopRight">@dimen/radius_card</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- Two-way switch such as "On Wanderly / Not on Wanderly" -->
+    <style name="Widget.Wanderly.Button.Segment" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textColor">@color/segment_text</item>
+        <item name="backgroundTint">@color/segment_background</item>
+        <item name="strokeColor">@color/chip_checked_stroke</item>
     </style>
 
     <!-- Small text action such as "Edit" next to a section title -->

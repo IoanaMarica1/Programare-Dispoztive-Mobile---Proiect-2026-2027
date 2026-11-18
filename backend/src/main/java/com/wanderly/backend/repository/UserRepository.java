@@ -8,12 +8,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    Optional<User> findByPublicId(UUID publicId);
 
     // SELECT ... FOR UPDATE: the row stays locked until the surrounding transaction ends.
     @Lock(LockModeType.PESSIMISTIC_WRITE)

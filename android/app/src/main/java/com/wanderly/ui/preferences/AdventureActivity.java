@@ -20,6 +20,11 @@ import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.GenerateTripRequest;
 import com.wanderly.ui.adventure.PlanActivity;
 import com.wanderly.ui.common.Session;
+import com.wanderly.data.remote.dto.GenerateGroupTripRequest;
+import com.wanderly.ui.common.Dialogs;
+import com.wanderly.ui.group.MemberAvatars;
+import com.wanderly.ui.group.Traveller;
+import com.wanderly.ui.group.TravellersActivity;
 
 public class AdventureActivity extends AppCompatActivity {
 
@@ -66,13 +71,21 @@ public class AdventureActivity extends AppCompatActivity {
                 startActivity(i);
             } else if (outcome.code == 401) {
                 Session.expire(AdventureActivity.this);
-            } else if (outcome.code == 0 || outcome.code >= 500 || outcome.code == 429) {
-                showRetry(outcome.request, outcome.message);
             } else {
-                // A 4xx (bad dates, too long...) fails the same way again, so no Retry.
-                showError(outcome.message);
+                showFailure(outcome);
             }
         });
+
+        // D1: friends on the trip come back from "Who's coming?".
+        if (savedInstanceState != null) {
+            travellers.addAll(Traveller.fromJson(savedInstanceState.getString(STATE_TRAVELLERS)));
+        }
+        findViewById(R.id.groupEntry).setOnClickListener(v -> openTravellers());
+        findViewById(R.id.groupEntryClear).setOnClickListener(v -> {
+            travellers.clear();
+            showTravellers();
+        });
+        showTravellers();
 
         destinationLayout = findViewById(R.id.destinationLayout);
         datesLayout = findViewById(R.id.datesLayout);
@@ -156,6 +169,98 @@ public class AdventureActivity extends AppCompatActivity {
         });
     }
 
+    // ------------------------------------------------------------------ D1: group trips
+
+    private static final String STATE_TRAVELLERS = "travellers";
+
+    private final java.util.List<Traveller> travellers = new java.util.ArrayList<>();
+    private final androidx.activity.result.ActivityResultLauncher<Intent> travellersLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() != RESULT_OK || result.getData() == null) return;
+                        travellers.clear();
+                        travellers.addAll(Traveller.fromJson(
+                                result.getData().getStringExtra(TravellersActivity.EXTRA_TRAVELLERS)));
+                        showTravellers();
+                    });
+
+    private void openTravellers() {
+        travellersLauncher.launch(TravellersActivity.intent(this, travellers));
+    }
+
+    /** The entry card invites to plan with friends, or shows who is already coming. */
+    private void showTravellers() {
+        boolean group = !travellers.isEmpty();
+        android.widget.LinearLayout avatars = findViewById(R.id.groupEntryAvatars);
+        findViewById(R.id.groupEntryIcon).setVisibility(group ? android.view.View.GONE : android.view.View.VISIBLE);
+        avatars.setVisibility(group ? android.view.View.VISIBLE : android.view.View.GONE);
+        findViewById(R.id.groupEntryClear).setVisibility(group ? android.view.View.VISIBLE : android.view.View.GONE);
+        findViewById(R.id.groupEntryChevron).setVisibility(group ? android.view.View.GONE : android.view.View.VISIBLE);
+        android.widget.TextView title = findViewById(R.id.groupEntryTitle);
+        android.widget.TextView subtitle = findViewById(R.id.groupEntrySubtitle);
+        ((android.widget.TextView) findViewById(R.id.generateButton)).setText(
+                group ? R.string.action_generate_group_plan : R.string.action_generate_plan);
+        if (!group) {
+            title.setText(R.string.group_entry_title);
+            subtitle.setText(R.string.group_entry_subtitle);
+            return;
+        }
+        title.setText(getString(R.string.group_entry_people, getResources()
+                .getQuantityString(R.plurals.group_friends, travellers.size(), travellers.size())));
+        subtitle.setText(R.string.group_entry_edit);
+        java.util.List<MemberAvatars.Person> people = new java.util.ArrayList<>();
+        for (int i = 0; i < travellers.size(); i++) {
+            Traveller t = travellers.get(i);
+            people.add(new MemberAvatars.Person(t.name, t.profilePicture, i + 1));
+        }
+        MemberAvatars.stack(avatars, people, 36, 4);
+    }
+
+    // ------------------------------------------------------------------ errors
+
+    /** Every failed plan opens a dialog; the ones worth repeating offer Try again. */
+    private void showFailure(GenerateTripViewModel.Outcome outcome) {
+        if (outcome.code == 0) {
+            Dialogs.showNetworkError(this, this::generateAgain);
+            return;
+        }
+        if (outcome.code >= 500 || outcome.code == 429) {
+            // "Plan generation failed" says nothing the title doesn't; the busy text says what to do.
+            String message = outcome.message == null || outcome.message.startsWith("Plan generation")
+                    || outcome.message.startsWith("Could not generate")
+                    ? getString(R.string.dialog_plan_failed_busy) : outcome.message;
+            Dialogs.error(this, R.drawable.ic_error, getString(R.string.dialog_plan_failed_title), message)
+                    .setNegativeButton(R.string.action_cancel, null)
+                    .setPositiveButton(R.string.action_retry, (d, w) -> generateAgain())
+                    .show();
+            return;
+        }
+        // A 4xx fails the same way again, so no Try again; for a group, the fix is usually in the group.
+        if (outcome.group && outcome.code == 422 && outcome.message != null
+                && outcome.message.contains("your own preferences")) {
+            Dialogs.info(this, R.drawable.ic_person, getString(R.string.dialog_own_prefs_title),
+                            getString(R.string.dialog_own_prefs_message))
+                    .setNegativeButton(R.string.action_not_now, null)
+                    .setPositiveButton(R.string.dialog_own_prefs_action,
+                            (d, w) -> startActivity(new Intent(this, PreferencesActivity.class)))
+                    .show();
+        } else if (outcome.group && (outcome.code == 422 || outcome.code == 404
+                || (outcome.code == 400 && !travellers.isEmpty() && outcome.message != null
+                    && (outcome.message.contains("person") || outcome.message.contains("group"))))) {
+            Dialogs.error(this, R.drawable.ic_group, getString(R.string.dialog_group_failed_title), outcome.message)
+                    .setNegativeButton(R.string.action_cancel, null)
+                    .setPositiveButton(R.string.dialog_group_failed_edit, (d, w) -> openTravellers())
+                    .show();
+        } else {
+            Dialogs.showError(this, getString(R.string.dialog_plan_invalid_title), outcome.message);
+        }
+    }
+
+    /** Sends the form again exactly as it is now. */
+    private void generateAgain() {
+        findViewById(R.id.generateButton).performClick();
+    }
+
     /** Starts on the saved pace; with several saved, on the fullest one, as the backend does. */
     private void preselectPace() {
         ApiClient.getService(getApplicationContext()).getPreferences().enqueue(
@@ -192,7 +297,12 @@ public class AdventureActivity extends AppCompatActivity {
     }
 
     private void sendRequest(GenerateTripRequest req) {
-        viewModel.generate(ApiClient.getService(getApplicationContext()), req);
+        if (travellers.isEmpty()) {
+            viewModel.generate(ApiClient.getService(getApplicationContext()), req);
+        } else {
+            viewModel.generateGroup(ApiClient.getService(getApplicationContext()),
+                    new GenerateGroupTripRequest(req, Traveller.toRequests(travellers)));
+        }
     }
 
     @Override
@@ -204,23 +314,7 @@ public class AdventureActivity extends AppCompatActivity {
         }
         outState.putInt("startHour", startHour);
         outState.putInt("endHour", endHour);
-    }
-
-    private void showRetry(GenerateTripRequest req, String message) {
-        com.google.android.material.snackbar.Snackbar
-                .make(findViewById(R.id.generateButton), message,
-                        com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
-                .setAction("Retry", v -> sendRequest(req))
-                .setTextMaxLines(4)
-                .show();
-    }
-
-    private void showError(String message) {
-        com.google.android.material.snackbar.Snackbar
-                .make(findViewById(R.id.generateButton), message,
-                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
-                .setTextMaxLines(4)
-                .show();
+        outState.putString(STATE_TRAVELLERS, Traveller.toJson(travellers));
     }
 
     // --- B2: destination autocomplete (Open-Meteo geocoding, free, no key) ---

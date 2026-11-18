@@ -31,6 +31,9 @@ import com.wanderly.data.remote.dto.CheckInRequest;
 import com.wanderly.data.remote.dto.SurprisePlaceResponse;
 import com.wanderly.data.remote.dto.SurpriseRequest;
 import com.wanderly.data.remote.dto.VisitResultResponse;
+import com.wanderly.data.remote.dto.GenerateGroupTripRequest;
+import com.wanderly.data.remote.dto.RegenerateTripRequest;
+import com.wanderly.data.remote.dto.TravellerLookupResponse;
 import java.util.List;
 
 public interface ApiService {
@@ -106,4 +109,21 @@ public interface ApiService {
     /** 201 on a first visit (points awarded), 200 when the place was visited before. 422: too far away. */
     @POST("api/surprise/check-in")
     Call<VisitResultResponse> checkIn(@Body CheckInRequest request);
+
+    // ---- group trips (D1)
+
+    /** 404: nobody on Wanderly uses that email; 400: it is the signed-in user's own email. */
+    @GET("api/trips/group/lookup")
+    Call<TravellerLookupResponse> lookupTraveller(@Query("email") String email);
+
+    @POST("api/trips/generate-group")
+    Call<TripResponse> generateGroupTrip(@Body GenerateGroupTripRequest request);
+
+    /** A new plan for the same trip and people; a draft is replaced, a saved plan is kept. */
+    @POST("api/trips/{tripId}/regenerate")
+    Call<TripResponse> regenerateTrip(@Path("tripId") String tripId, @Body RegenerateTripRequest request);
+
+    /** A member hides someone else's group trip from their own list. */
+    @DELETE("api/trips/{tripId}/membership")
+    Call<Void> leaveTrip(@Path("tripId") String tripId);
 }
