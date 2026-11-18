@@ -222,6 +222,40 @@ class SurpriseRankerTest {
     }
 
     @Test
+    @DisplayName("Variația: nu doar locuri de același fel, iar un lanț cu mai multe filiale apare o singură dată")
+    void pickVariedMixesKindsAndSkipsChainBranches() {
+        Map<String, String> fast = Map.of("amenity", "fast_food", "opening_hours", "24/7");
+        Element mcNear = place(1, "McDonald's", 100, fast);
+        Element mcFar = place(2, "McDonald's", 900, fast);
+        Element burger = place(3, "Burger Shack", 150, fast);
+        Element pizza = place(4, "Pizza Corner", 200, fast);
+        Element restaurant = place(5, "Da Mario", 600,
+                Map.of("amenity", "restaurant", "opening_hours", "24/7"));
+        Element bakery = place(6, "Daily Bread", 700, Map.of("shop", "bakery", "opening_hours", "24/7"));
+
+        List<Candidate> ranked = rank(Mood.HUNGRY, MONDAY_NOON, mcNear, mcFar, burger, pizza, restaurant, bakery);
+        List<Candidate> picked = SurpriseRanker.pickVaried(ranked, 4);
+
+        assertThat(picked).hasSize(4);
+        assertThat(picked).extracting(c -> c.place().name()).containsOnlyOnce("McDonald's");
+        assertThat(picked).extracting(c -> c.rule().label()).contains("restaurant", "bakery");
+        assertThat(picked.stream().filter(c -> c.rule().label().equals("fast-food spot"))).hasSizeLessThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Variația: primul loc rămâne cel mai bun, iar lista e mai scurtă când nu sunt destule locuri")
+    void pickVariedKeepsTheBestFirst() {
+        Element near = place(1, "Near Park", 100, Map.of("leisure", "park"));
+        Element far = place(2, "Far Park", 1500, Map.of("leisure", "park"));
+        List<Candidate> ranked = rank(Mood.RELAXED, MONDAY_NOON, near, far);
+
+        List<Candidate> picked = SurpriseRanker.pickVaried(ranked, 5);
+
+        assertThat(picked).extracting(c -> c.place().name()).containsExactly("Near Park", "Far Park");
+        assertThat(SurpriseRanker.pickVaried(List.of(), 5)).isEmpty();
+    }
+
+    @Test
     @DisplayName("Timp de mers: ~1,3 × distanța la 5 km/h, minim un minut")
     void walkingTime() {
         Element here = place(1, "Right Here", 10, Map.of("leisure", "park"));

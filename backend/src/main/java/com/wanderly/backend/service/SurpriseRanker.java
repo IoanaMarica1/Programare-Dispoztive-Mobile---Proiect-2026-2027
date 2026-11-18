@@ -45,6 +45,8 @@ final class SurpriseRanker {
     private static final double UNVERIFIED_PENALTY = 0.05;
     private static final double DUPLICATE_METERS = 150;
     private static final int MAX_PHOTO_URL = 500;
+    /** Each earlier pick of the same kind of place lowers the next one's score by this much. */
+    private static final double SAME_KIND_PENALTY = 0.15;
 
     static final Map<Mood, List<Rule>> RULES = new EnumMap<>(Mood.class);
 
@@ -181,6 +183,35 @@ final class SurpriseRanker {
             kept.add(c);
         }
         return kept;
+    }
+
+    /**
+     * The few places to show side by side: the best one first, then the best of what is left with a
+     * penalty for every kind of place already picked, so a hungry traveler gets a restaurant, a bakery and
+     * a café rather than three fast-food spots. A name that was already picked is skipped (a chain with
+     * many branches shows once, at the branch that ranked best).
+     *
+     * @param ranked best first, as returned by {@link #rank}
+     */
+    static List<Candidate> pickVaried(List<Candidate> ranked, int max) {
+        List<Candidate> picked = new ArrayList<>();
+        List<Candidate> pool = new ArrayList<>(ranked);
+        while (picked.size() < max && !pool.isEmpty()) {
+            Candidate best = null;
+            double bestScore = Double.NEGATIVE_INFINITY;
+            for (Candidate c : pool) {   // pool is best first, so a tie keeps the better-ranked place
+                long sameKind = picked.stream().filter(p -> p.rule().label().equals(c.rule().label())).count();
+                double adjusted = c.score() - SAME_KIND_PENALTY * sameKind;
+                if (adjusted > bestScore) {
+                    best = c;
+                    bestScore = adjusted;
+                }
+            }
+            Candidate chosen = best;
+            picked.add(chosen);
+            pool.removeIf(c -> c == chosen || c.place().name().equalsIgnoreCase(chosen.place().name()));
+        }
+        return picked;
     }
 
     private static Candidate candidate(Element place, Mood mood, double lat, double lon, ZonedDateTime now) {

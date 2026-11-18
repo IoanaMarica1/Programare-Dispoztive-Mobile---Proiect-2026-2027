@@ -7,6 +7,7 @@ import com.wanderly.backend.dto.visit.VisitResultResponse;
 import com.wanderly.backend.service.SurpriseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,9 +23,9 @@ public class SurpriseController {
 
     private final SurpriseService surpriseService;
 
-    // POST because of the list of places to skip. 404 when nothing open fits the mood, 503 when the map is busy.
+    // A few places, best first. 404 when nothing open fits the mood, 503 when the map is busy.
     @PostMapping
-    public SurprisePlaceResponse suggest(@Valid @RequestBody SurpriseRequest request) {
+    public List<SurprisePlaceResponse> suggest(@Valid @RequestBody SurpriseRequest request) {
         return surpriseService.suggest(request);
     }
 

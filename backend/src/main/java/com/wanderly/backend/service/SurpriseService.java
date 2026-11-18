@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Story E1: one tap, the best place within 2 km that fits the mood and is open now.
+ * Story E1: one tap, a few of the best places within 2 km that fit the mood and are open now.
  *
  * <p>Not @Transactional: the map lookups take seconds, so no database connection is held while they run.
  */
@@ -64,7 +64,11 @@ public class SurpriseService {
         this.visitService = visitService;
     }
 
-    public SurprisePlaceResponse suggest(SurpriseRequest request) {
+    /** Up to this many places come back at once, for the app to show as swipeable cards. */
+    static final int MAX_OPTIONS = 5;
+
+    /** A handful of places that fit the mood, best first and varied in kind; 404 when none is open. */
+    public List<SurprisePlaceResponse> suggest(SurpriseRequest request) {
         ZoneId zone = zone(request.timeZone());
         Mood mood = request.mood();
         double lat = request.latitude();
@@ -80,7 +84,9 @@ public class SurpriseService {
                     ? "Nothing open within 2 km fits this mood right now. Try another mood."
                     : "That's everything open nearby for this mood. Try another mood.");
         }
-        return toResponse(mood, remaining.get(0), remaining.size() > 1);
+        return SurpriseRanker.pickVaried(remaining, MAX_OPTIONS).stream()
+                .map(c -> toResponse(mood, c))
+                .toList();
     }
 
     /**
@@ -162,13 +168,13 @@ public class SurpriseService {
         cache.put(key, new Cached(places, Instant.now(), ttl));
     }
 
-    private static SurprisePlaceResponse toResponse(Mood mood, Candidate c, boolean moreAvailable) {
+    private static SurprisePlaceResponse toResponse(Mood mood, Candidate c) {
         Element p = c.place();
         return new SurprisePlaceResponse(
                 p.ref(), p.name(), capitalize(c.rule().label()), p.lat(), p.lon(),
                 c.distanceMeters(), c.walkingMinutes(), SurpriseRanker.why(mood, c), c.openNote(),
                 SurpriseRanker.photoUrl(p.tags()), SurpriseRanker.address(p.tags()),
-                SurpriseRanker.website(p.tags()), moreAvailable);
+                SurpriseRanker.website(p.tags()));
     }
 
     /** The phone's own zone, falling back to the server's when the app doesn't send one. */

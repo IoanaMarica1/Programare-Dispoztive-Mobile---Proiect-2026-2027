@@ -69,12 +69,14 @@ class SurpriseServiceTest {
     }
 
     @Test
-    @DisplayName("Returnează cel mai bun loc cu distanță, timp de mers, explicație și markerul „mai sunt altele”")
-    void suggest_returnsTheBestPlace() {
+    @DisplayName("Returnează locurile potrivite, cel mai bun primul, cu distanță, timp de mers și explicație")
+    void suggest_returnsTheBestPlaceFirst() {
         overpassReturns(park(1, "Far Park", 1500), park(2, "Near Park", 200));
 
-        SurprisePlaceResponse res = service.suggest(request(Mood.RELAXED, null));
+        List<SurprisePlaceResponse> all = service.suggest(request(Mood.RELAXED, null));
 
+        assertThat(all).extracting(SurprisePlaceResponse::id).containsExactly("node/2", "node/1");
+        SurprisePlaceResponse res = all.get(0);
         assertThat(res.id()).isEqualTo("node/2");
         assertThat(res.name()).isEqualTo("Near Park");
         assertThat(res.category()).isEqualTo("Park");
@@ -82,21 +84,26 @@ class SurpriseServiceTest {
         assertThat(res.walkingMinutes()).isPositive();
         assertThat(res.why()).startsWith("A calm park");
         assertThat(res.openNote()).isNotBlank();
-        assertThat(res.moreAvailable()).isTrue();
     }
 
     @Test
-    @DisplayName("„Another one”: locurile deja arătate sunt sărite, iar ultimul nu mai are „altele”")
-    void suggest_anotherOneSkipsShownPlaces() {
+    @DisplayName("Nu se trimit mai mult de 5 locuri, chiar dacă zona are multe")
+    void suggest_capsTheNumberOfPlaces() {
+        overpassReturns(park(1, "Park A", 100), park(2, "Park B", 200), park(3, "Park C", 300),
+                park(4, "Park D", 400), park(5, "Park E", 500), park(6, "Park F", 600), park(7, "Park G", 700));
+
+        assertThat(service.suggest(request(Mood.RELAXED, null))).hasSize(SurpriseService.MAX_OPTIONS);
+    }
+
+    @Test
+    @DisplayName("Locurile excluse nu mai apar în listă")
+    void suggest_skipsExcludedPlaces() {
         overpassReturns(park(1, "First", 100), park(2, "Second", 400), park(3, "Third", 800));
 
-        SurprisePlaceResponse second = service.suggest(request(Mood.RELAXED, List.of("node/1")));
-        assertThat(second.id()).isEqualTo("node/2");
-        assertThat(second.moreAvailable()).isTrue();
-
-        SurprisePlaceResponse third = service.suggest(request(Mood.RELAXED, List.of("node/1", "node/2")));
-        assertThat(third.id()).isEqualTo("node/3");
-        assertThat(third.moreAvailable()).isFalse();
+        assertThat(service.suggest(request(Mood.RELAXED, List.of("node/1"))))
+                .extracting(SurprisePlaceResponse::id).containsExactly("node/2", "node/3");
+        assertThat(service.suggest(request(Mood.RELAXED, List.of("node/1", "node/2"))))
+                .extracting(SurprisePlaceResponse::id).containsExactly("node/3");
     }
 
     @Test
@@ -165,7 +172,8 @@ class SurpriseServiceTest {
                         e -> assertThat(e.getStatusCode().value()).isEqualTo(503));
         verify(geocoder, times(3)).nearby(anyString(), anyDouble(), anyDouble(), anyInt(), any());
 
-        assertThat(service.suggest(request(Mood.RELAXED, null)).id()).isEqualTo("node/1");
+        assertThat(service.suggest(request(Mood.RELAXED, null))).extracting(SurprisePlaceResponse::id)
+                .containsExactly("node/1");
     }
 
     @Test
@@ -180,11 +188,11 @@ class SurpriseServiceTest {
                         Map.of("leisure", "garden", "opening_hours", "24/7"))));
         when(geocoder.nearby(eq("beach"), anyDouble(), anyDouble(), anyInt(), any())).thenReturn(null);  // one search failed
 
-        SurprisePlaceResponse first = service.suggest(request(Mood.RELAXED, null));
-        SurprisePlaceResponse second = service.suggest(request(Mood.RELAXED, List.of(first.id())));
+        List<SurprisePlaceResponse> first = service.suggest(request(Mood.RELAXED, null));
+        List<SurprisePlaceResponse> second = service.suggest(request(Mood.RELAXED, List.of("node/1")));
 
-        assertThat(List.of(first.id(), second.id())).containsExactlyInAnyOrder("node/1", "node/2");
-        assertThat(second.moreAvailable()).isFalse();
+        assertThat(first).extracting(SurprisePlaceResponse::id).containsExactlyInAnyOrder("node/1", "node/2");
+        assertThat(second).extracting(SurprisePlaceResponse::id).containsExactly("node/2");
         // The second tap reuses the fallback result instead of searching again.
         verify(overpass, times(1)).around(anyDouble(), anyDouble(), anyInt(), any(), any());
     }
@@ -198,8 +206,8 @@ class SurpriseServiceTest {
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         e -> assertThat(e.getStatusCode().value()).isEqualTo(400));
 
-        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, null, null)).id()).isEqualTo("node/1");
-        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "  ", null)).id()).isEqualTo("node/1");
+        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, null, null))).hasSize(1);
+        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "  ", null))).hasSize(1);
     }
 
     // ------------------------------------------------------------ check-in
@@ -287,8 +295,7 @@ class SurpriseServiceTest {
     void exclude_nullOrEmpty() {
         overpassReturns(park(1, "First", 100));
 
-        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "UTC", List.of()))
-                .id()).isEqualTo("node/1");
-        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "UTC", null)).id()).isEqualTo("node/1");
+        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "UTC", List.of()))).hasSize(1);
+        assertThat(service.suggest(new SurpriseRequest(Mood.RELAXED, LAT, LON, "UTC", null))).hasSize(1);
     }
 }
