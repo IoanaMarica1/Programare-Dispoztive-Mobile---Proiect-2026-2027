@@ -10,7 +10,7 @@ import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.GridLayout;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,23 +21,26 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.os.CancellationSignal;
+import androidx.viewpager2.widget.CompositePageTransformer;
+import androidx.viewpager2.widget.MarginPageTransformer;
+import androidx.viewpager2.widget.ViewPager2;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.wanderly.R;
 import com.wanderly.data.remote.ApiClient;
 import com.wanderly.data.remote.dto.CheckInRequest;
 import com.wanderly.data.remote.dto.SurprisePlaceResponse;
 import com.wanderly.data.remote.dto.SurpriseRequest;
 import com.wanderly.data.remote.dto.VisitResultResponse;
-import com.wanderly.ui.common.Avatars;
-import com.wanderly.ui.common.Formats;
 import com.wanderly.ui.common.Session;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -47,15 +50,17 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Story E1. One tap on a mood gives the best place within 2 km that fits it and is open now: why it
- * matches, how far it is, a button to walk there and, once there, a check-in that earns points.
+ * Story E1. One tap on a mood gives a few places within 2 km that fit it and are open now, as cards to swipe
+ * through: why each one matches, how far it is, a button to walk there and, once there, a check-in that
+ * earns points.
  */
-public class SurpriseActivity extends AppCompatActivity {
+public class SurpriseActivity extends AppCompatActivity implements PlaceCardAdapter.Listener {
 
-    private static final String STATE_PLACE = "place";
-    private static final String STATE_SHOWN = "shown";
+    private static final String STATE_PLACES = "places";
+    private static final String STATE_PAGE = "page";
     private static final String STATE_MOOD = "mood";
     private static final String STATE_CHECKED_IN = "checkedIn";
+    private static final Type PLACE_LIST = new TypeToken<List<SurprisePlaceResponse>>() {}.getType();
 
     /** What the screen shows. The mood grid stays visible under a message, so a dead end leads to another mood. */
     private enum Screen { PICK, LOADING, MESSAGE, RESULT }
@@ -63,18 +68,17 @@ public class SurpriseActivity extends AppCompatActivity {
     /** Why a message is up, so coming back from the settings app can carry on where it stopped. */
     private enum Reason { NONE, PERMISSION_ASK, PERMISSION_BLOCKED, SERVICES_OFF, OTHER }
 
-    private View moodPanel, loadingPanel, messagePanel, resultPanel, addressRow, subtitleText;
+    private View moodPanel, loadingPanel, messagePanel, resultPanel, subtitleText, swipeHint;
     private TextView messageTitle, messageBody;
-    private MaterialButton messageButton, takeMeThereButton, anotherButton, checkInButton;
-    private ImageView placePhoto;
-    private TextView placeInitial, placeCategory, placeName, placeWhy, placeDistance, placeOpen, placeAddress;
+    private MaterialButton messageButton;
+    private LinearLayout dotsRow;
+    private ViewPager2 placePager;
+    private PlaceCardAdapter adapter;
 
     private final Gson gson = new Gson();
     private Mood mood;
-    private SurprisePlaceResponse place;
-    /** Places already shown for this mood, so "Another one" never repeats. */
-    private final Set<String> shown = new LinkedHashSet<>();
-    private boolean checkedIn;
+    private final List<SurprisePlaceResponse> places = new ArrayList<>();
+    private final Set<String> checkedIn = new LinkedHashSet<>();
 
     private Reason reason = Reason.NONE;
     /** What to do once the traveler has fixed the permission or the location setting. */
@@ -90,7 +94,7 @@ public class SurpriseActivity extends AppCompatActivity {
     /** Only for check-in: asks to upgrade approximate location to precise, then goes on with the check-in. */
     private final ActivityResultLauncher<String> finePermissionRequest = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted) checkIn();
+                if (granted) onCheckIn(currentPlace());
             });
 
     @Override
@@ -103,60 +107,46 @@ public class SurpriseActivity extends AppCompatActivity {
         loadingPanel = findViewById(R.id.loadingPanel);
         messagePanel = findViewById(R.id.messagePanel);
         resultPanel = findViewById(R.id.resultPanel);
-        addressRow = findViewById(R.id.placeAddressRow);
+        swipeHint = findViewById(R.id.swipeHint);
+        dotsRow = findViewById(R.id.dotsRow);
+        placePager = findViewById(R.id.placePager);
         messageTitle = findViewById(R.id.messageTitle);
         messageBody = findViewById(R.id.messageBody);
         messageButton = findViewById(R.id.messageButton);
-        takeMeThereButton = findViewById(R.id.takeMeThereButton);
-        anotherButton = findViewById(R.id.anotherButton);
-        checkInButton = findViewById(R.id.checkInButton);
-        placePhoto = findViewById(R.id.placePhoto);
-        placeInitial = findViewById(R.id.placeInitial);
-        placeCategory = findViewById(R.id.placeCategory);
-        placeName = findViewById(R.id.placeName);
-        placeWhy = findViewById(R.id.placeWhy);
-        placeDistance = findViewById(R.id.placeDistance);
-        placeOpen = findViewById(R.id.placeOpen);
-        placeAddress = findViewById(R.id.placeAddress);
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
-        takeMeThereButton.setOnClickListener(v -> takeMeThere());
-        anotherButton.setOnClickListener(v -> another());
-        checkInButton.setOnClickListener(v -> checkIn());
         findViewById(R.id.changeMoodButton).setOnClickListener(v -> changeMood());
 
-        buildMoodButtons();
+        setUpPager();
+        buildMoodTiles();
         restore(savedInstanceState);
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
-        if (place != null) {
-            out.putString(STATE_PLACE, gson.toJson(place));
-            out.putStringArrayList(STATE_SHOWN, new ArrayList<>(shown));
-            out.putString(STATE_MOOD, mood == null ? null : mood.name());
-            out.putBoolean(STATE_CHECKED_IN, checkedIn);
+        if (!places.isEmpty() && mood != null) {
+            out.putString(STATE_PLACES, gson.toJson(places, PLACE_LIST));
+            out.putInt(STATE_PAGE, placePager.getCurrentItem());
+            out.putString(STATE_MOOD, mood.name());
+            out.putStringArrayList(STATE_CHECKED_IN, new ArrayList<>(checkedIn));
         }
     }
 
-    /** After a rotation the card comes back as it was, with the same places already skipped. */
+    /** After a rotation the cards come back as they were, on the same page. */
     private void restore(@Nullable Bundle state) {
-        String json = state == null ? null : state.getString(STATE_PLACE);
-        SurprisePlaceResponse saved = json == null ? null : gson.fromJson(json, SurprisePlaceResponse.class);
-        if (saved == null) {
+        String json = state == null ? null : state.getString(STATE_PLACES);
+        List<SurprisePlaceResponse> saved = json == null ? null : gson.fromJson(json, PLACE_LIST);
+        mood = state == null ? null : Mood.fromName(state.getString(STATE_MOOD));
+        // A mood the app no longer knows (saved by another version): nothing sensible to continue from.
+        if (saved == null || saved.isEmpty() || mood == null) {
             show(Screen.PICK);
             return;
         }
-        mood = Mood.fromName(state.getString(STATE_MOOD));
-        if (mood == null) {   // saved by another version of the app: nothing sensible to continue from
-            show(Screen.PICK);
-            return;
-        }
-        ArrayList<String> ids = state.getStringArrayList(STATE_SHOWN);
-        if (ids != null) shown.addAll(ids);
-        checkedIn = state.getBoolean(STATE_CHECKED_IN);
-        showPlace(saved);
+        ArrayList<String> ids = state.getStringArrayList(STATE_CHECKED_IN);
+        checkedIn.clear();
+        if (ids != null) checkedIn.addAll(ids);
+        showPlaces(saved, state.getInt(STATE_PAGE, 0));
     }
 
     // Back from the settings app (or the permission dialog): carry on if what was missing is now there.
@@ -181,145 +171,155 @@ public class SurpriseActivity extends AppCompatActivity {
 
     // ------------------------------------------------------------------ mood picker
 
-    private void buildMoodButtons() {
+    private void buildMoodTiles() {
         GridLayout grid = findViewById(R.id.moodGrid);
         LayoutInflater inflater = LayoutInflater.from(this);
         for (Mood m : Mood.values()) {
-            MaterialButton button = (MaterialButton) inflater.inflate(R.layout.item_mood_button, grid, false);
-            button.setText(m.label);
-            button.setOnClickListener(v -> chooseMood(m));
-            grid.addView(button);
+            View tile = inflater.inflate(R.layout.item_mood_tile, grid, false);
+            ((TextView) tile.findViewById(R.id.moodEmoji)).setText(m.emoji);
+            ((TextView) tile.findViewById(R.id.moodLabel)).setText(m.label);
+            tile.setContentDescription(getString(m.label));
+            tile.setOnClickListener(v -> chooseMood(m));
+            grid.addView(tile);
         }
     }
 
     private void chooseMood(Mood chosen) {
         if (busy) return;
         mood = chosen;
-        shown.clear();
-        place = null;
-        checkedIn = false;
-        suggest(false);
+        places.clear();
+        checkedIn.clear();
+        suggest();
     }
 
     private void changeMood() {
         cancelWork();
-        place = null;
-        shown.clear();
+        places.clear();
+        checkedIn.clear();
         resume = null;
         show(Screen.PICK);
     }
 
-    private void another() {
-        if (busy || place == null || !place.moreAvailable) return;
-        suggest(true);
+    // ------------------------------------------------------------------ the suggestions
+
+    private void suggest() {
+        withLocation(false, false, this::request);
     }
 
-    // ------------------------------------------------------------------ the suggestion
-
-    /** {@code another}: the current card stays on screen if getting the next one fails. */
-    private void suggest(boolean another) {
-        withLocation(false, another, location -> request(location, another));
-    }
-
-    private void request(Location location, boolean another) {
+    private void request(Location location) {
         SurpriseRequest body = new SurpriseRequest(mood.name(), location.getLatitude(), location.getLongitude(),
-                TimeZone.getDefault().getID(), recentlyShown());
+                TimeZone.getDefault().getID(), null);
 
-        Call<SurprisePlaceResponse> call = ApiClient.getService(this).surprise(body);
+        Call<List<SurprisePlaceResponse>> call = ApiClient.getService(this).surprise(body);
         activeCall = call;
-        call.enqueue(new Callback<SurprisePlaceResponse>() {
+        call.enqueue(new Callback<List<SurprisePlaceResponse>>() {
             @Override
-            public void onResponse(@NonNull Call<SurprisePlaceResponse> c, @NonNull Response<SurprisePlaceResponse> r) {
+            public void onResponse(@NonNull Call<List<SurprisePlaceResponse>> c,
+                                   @NonNull Response<List<SurprisePlaceResponse>> r) {
                 if (isDestroyed()) return;
                 busy = false;
-                if (r.isSuccessful() && r.body() != null) {
-                    shown.add(r.body().id);
-                    checkedIn = false;
-                    showPlace(r.body());
+                if (r.isSuccessful() && r.body() != null && !r.body().isEmpty()) {
+                    showPlaces(r.body(), 0);
                 } else if (r.code() == 401) {
                     Session.expire(SurpriseActivity.this);
-                } else if (r.code() == 404) {
-                    // Nothing (more) open that fits is not a failure: no "try again", just another mood.
-                    String text = ApiClient.errorMessage(r, getString(R.string.surprise_error_generic));
-                    if (another && place != null) {
-                        place.moreAvailable = false;
-                        showPlace(place);
-                        Toast.makeText(SurpriseActivity.this, text, Toast.LENGTH_LONG).show();
-                    } else {
-                        showMessage(Reason.OTHER, R.string.surprise_nothing_title, text, 0, null);
-                    }
+                } else if (r.isSuccessful() || r.code() == 404) {
+                    // Nothing open that fits is not a failure: no "try again", just another mood.
+                    String text = r.isSuccessful() ? getString(R.string.surprise_error_generic)
+                            : ApiClient.errorMessage(r, getString(R.string.surprise_error_generic));
+                    showMessage(Reason.OTHER, R.string.surprise_nothing_title, text, 0, null);
                 } else {
-                    requestFailed(another, ApiClient.errorMessage(r, getString(R.string.surprise_error_generic)));
+                    requestFailed(ApiClient.errorMessage(r, getString(R.string.surprise_error_generic)));
                 }
             }
 
             @Override
-            public void onFailure(@NonNull Call<SurprisePlaceResponse> c, @NonNull Throwable t) {
+            public void onFailure(@NonNull Call<List<SurprisePlaceResponse>> c, @NonNull Throwable t) {
                 if (isDestroyed() || c.isCanceled()) return;
                 busy = false;
-                requestFailed(another, getString(R.string.error_network));
+                requestFailed(getString(R.string.error_network));
             }
         });
     }
 
-    private void requestFailed(boolean another, String text) {
-        if (another && place != null) {
-            showPlace(place);   // back to the card, buttons enabled again
-            Toast.makeText(this, text, Toast.LENGTH_LONG).show();
-        } else {
-            showMessage(Reason.OTHER, R.string.surprise_error_title, text, R.string.surprise_retry, () -> suggest(false));
-        }
+    private void requestFailed(String text) {
+        showMessage(Reason.OTHER, R.string.surprise_error_title, text, R.string.surprise_retry, this::suggest);
     }
 
-    /** The server skips at most this many places; older ones can only come back if the area has more than that. */
-    private static final int MAX_EXCLUDED = 50;
+    private void setUpPager() {
+        adapter = new PlaceCardAdapter(this);
+        placePager.setAdapter(adapter);
+        placePager.setOffscreenPageLimit(1);   // the neighbours are drawn already, so they peek in at the edges
 
-    private ArrayList<String> recentlyShown() {
-        ArrayList<String> all = new ArrayList<>(shown);
-        return new ArrayList<>(all.subList(Math.max(0, all.size() - MAX_EXCLUDED), all.size()));
+        // A little gap between cards, and the card that is not in the middle sits slightly smaller.
+        CompositePageTransformer transformer = new CompositePageTransformer();
+        transformer.addTransformer(new MarginPageTransformer(getResources().getDimensionPixelSize(R.dimen.pager_gap)));
+        transformer.addTransformer((page, position) -> {
+            float closeness = 1f - Math.min(1f, Math.abs(position));
+            page.setScaleY(0.94f + 0.06f * closeness);
+        });
+        placePager.setPageTransformer(transformer);
+        placePager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                selectDot(position);
+            }
+        });
     }
 
-    private void showPlace(SurprisePlaceResponse p) {
-        place = p;
-        placeCategory.setText(p.category);
-        placeName.setText(p.name);
-        placeWhy.setText(p.why);
-        placeDistance.setText(getString(R.string.surprise_distance_walk, Formats.distance(p.distanceMeters), p.walkingMinutes));
-        placeOpen.setText(p.openNote);
-        placeOpen.setVisibility(p.openNote == null ? View.GONE : View.VISIBLE);
-        addressRow.setVisibility(p.address == null || p.address.isEmpty() ? View.GONE : View.VISIBLE);
-        placeAddress.setText(p.address);
+    private void showPlaces(List<SurprisePlaceResponse> list, int page) {
+        places.clear();
+        places.addAll(list);
+        adapter.submit(places, checkedIn);
+        int start = Math.max(0, Math.min(page, places.size() - 1));
+        placePager.setCurrentItem(start, false);
 
-        // The initial is the placeholder: it shows while the photo loads and when there is none.
-        placeInitial.setText(Avatars.initialOf(p.name));
-        placePhoto.setContentDescription(getString(R.string.surprise_photo_description, p.name));
-        if (p.photoUrl == null || p.photoUrl.isEmpty()) {
-            Glide.with(placePhoto).clear(placePhoto);
-            placePhoto.setImageDrawable(null);
-        } else {
-            Glide.with(placePhoto).load(p.photoUrl).centerCrop().into(placePhoto);
-        }
+        boolean several = places.size() > 1;
+        swipeHint.setVisibility(several ? View.VISIBLE : View.GONE);
+        dotsRow.setVisibility(several ? View.VISIBLE : View.GONE);
+        buildDots(places.size());
+        selectDot(start);
 
-        setCardWorking(false, false);
+        setCardWorking(false, null);
         show(Screen.RESULT);
     }
 
-    /** The card's buttons while something is going on: nothing can be tapped twice. */
-    private void setCardWorking(boolean working, boolean checkingIn) {
+    /** The place whose card is on screen, or null when there is none. */
+    @Nullable
+    private SurprisePlaceResponse currentPlace() {
+        int position = placePager.getCurrentItem();
+        return position >= 0 && position < places.size() ? places.get(position) : null;
+    }
+
+    private void buildDots(int count) {
+        dotsRow.removeAllViews();
+        int size = getResources().getDimensionPixelSize(R.dimen.space_s);
+        int gap = getResources().getDimensionPixelSize(R.dimen.space_xs);
+        for (int i = 0; i < count; i++) {
+            View dot = new View(this);
+            dot.setBackgroundResource(R.drawable.bg_pager_dot);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+            params.setMargins(gap, 0, gap, 0);
+            dotsRow.addView(dot, params);
+        }
+    }
+
+    private void selectDot(int position) {
+        for (int i = 0; i < dotsRow.getChildCount(); i++) {
+            dotsRow.getChildAt(i).setSelected(i == position);
+        }
+    }
+
+    /** The cards' buttons while something is going on: nothing can be tapped twice. */
+    private void setCardWorking(boolean working, @Nullable String checkingInId) {
         busy = working;
-        takeMeThereButton.setEnabled(!working);
-        boolean more = place != null && place.moreAvailable;
-        anotherButton.setEnabled(!working && more);
-        anotherButton.setText(more ? R.string.surprise_another : R.string.surprise_no_more);
-        checkInButton.setEnabled(!working && !checkedIn);
-        checkInButton.setText(checkedIn ? R.string.surprise_checked_in
-                : working && checkingIn ? R.string.surprise_checking_in : R.string.surprise_check_in);
+        adapter.setWorking(working, checkingInId);
     }
 
     // ------------------------------------------------------------------ take me there
 
     /** Walking directions in Google Maps if it is installed, else any maps app, else the browser. */
-    private void takeMeThere() {
+    @Override
+    public void onTakeMeThere(SurprisePlaceResponse place) {
         if (place == null) return;
         Intent maps = new Intent(Intent.ACTION_VIEW,
                 Uri.parse(SurpriseLinks.walkingNavigation(place.latitude, place.longitude)))
@@ -340,8 +340,9 @@ public class SurpriseActivity extends AppCompatActivity {
 
     // ------------------------------------------------------------------ check-in
 
-    private void checkIn() {
-        if (place == null || busy || checkedIn) return;
+    @Override
+    public void onCheckIn(SurprisePlaceResponse place) {
+        if (place == null || busy || checkedIn.contains(place.id)) return;
         if (!LocationFinder.hasFinePermission(this)) {
             // Approximate location can be a kilometre off: it would never pass the server's 150 m check.
             // Android 12+ lets the traveler upgrade from approximate to precise with one more question.
@@ -349,8 +350,7 @@ public class SurpriseActivity extends AppCompatActivity {
             finePermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION);
             return;
         }
-        SurprisePlaceResponse target = place;
-        withLocation(true, true, location -> sendCheckIn(target, location));
+        withLocation(true, true, location -> sendCheckIn(place, location));
     }
 
     private void sendCheckIn(SurprisePlaceResponse target, Location location) {
@@ -362,13 +362,14 @@ public class SurpriseActivity extends AppCompatActivity {
             public void onResponse(@NonNull Call<VisitResultResponse> c, @NonNull Response<VisitResultResponse> r) {
                 if (isDestroyed()) return;
                 if (r.isSuccessful() && r.body() != null) {
-                    checkedIn = true;
-                    setCardWorking(false, false);
+                    checkedIn.add(target.id);
+                    adapter.markCheckedIn(target.id);
+                    setCardWorking(false, null);
                     showCheckInResult(target, r.body());
                 } else if (r.code() == 401) {
                     Session.expire(SurpriseActivity.this);
                 } else {
-                    setCardWorking(false, false);
+                    setCardWorking(false, null);
                     // "You are 380 m from ... Check in when you are within 150 m." and the other server reasons.
                     Toast.makeText(SurpriseActivity.this,
                             ApiClient.errorMessage(r, getString(R.string.surprise_check_in_failed)), Toast.LENGTH_LONG).show();
@@ -378,7 +379,7 @@ public class SurpriseActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<VisitResultResponse> c, @NonNull Throwable t) {
                 if (isDestroyed() || c.isCanceled()) return;
-                setCardWorking(false, false);
+                setCardWorking(false, null);
                 Toast.makeText(SurpriseActivity.this, R.string.error_network, Toast.LENGTH_LONG).show();
             }
         });
@@ -410,7 +411,7 @@ public class SurpriseActivity extends AppCompatActivity {
      * Runs {@code next} with the phone's position, asking for the permission first if needed. Everything
      * that can go wrong (denied, blocked, location off, no signal) ends in a message saying how to fix it.
      *
-     * @param onCard true when a card is on screen and must stay there (a failure is then a toast)
+     * @param onCard true when the cards are on screen and must stay there (a failure is then a toast)
      */
     private void withLocation(boolean precise, boolean onCard, WithLocation next) {
         if (!LocationFinder.hasAnyPermission(this)) {
@@ -419,8 +420,9 @@ public class SurpriseActivity extends AppCompatActivity {
             return;
         }
         cancelWork();
-        if (onCard && place != null) {
-            setCardWorking(true, precise);
+        if (onCard && !places.isEmpty()) {
+            SurprisePlaceResponse target = currentPlace();
+            setCardWorking(true, precise && target != null ? target.id : null);
         } else {
             busy = true;
             show(Screen.LOADING);
@@ -443,8 +445,8 @@ public class SurpriseActivity extends AppCompatActivity {
 
     private void locationFailed(LocationFinder.Failure failure, boolean onCard, Runnable retry) {
         boolean off = failure == LocationFinder.Failure.SERVICES_OFF;
-        if (onCard && place != null) {
-            setCardWorking(false, false);
+        if (onCard && !places.isEmpty()) {
+            setCardWorking(false, null);
             Toast.makeText(this, off ? R.string.surprise_services_off_body : R.string.surprise_unavailable_body,
                     Toast.LENGTH_LONG).show();
         } else if (off) {

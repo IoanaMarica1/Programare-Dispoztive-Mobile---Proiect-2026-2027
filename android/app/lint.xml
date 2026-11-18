@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Cosmetic / informational checks that are intentional in this project -->
+    <issue id="ScrollViewSize" severity="ignore" />      <!-- fillViewport is set on purpose -->
+    <issue id="MergeRootFrame" severity="ignore" />      <!-- root FrameLayout holds background photo + content -->
+    <issue id="Overdraw" severity="ignore" />
+    <issue id="UseCompoundDrawables" severity="ignore" /> <!-- icon is tinted via app:tint -->
+    <issue id="IconXmlAndPng" severity="ignore" />
+    <issue id="LogNotTimber" severity="ignore" />
+    <issue id="UseTomlInstead" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+</lint>

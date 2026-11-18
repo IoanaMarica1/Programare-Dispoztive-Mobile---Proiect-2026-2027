@@ -95,9 +95,11 @@ public class OverpassClient {
         for (int i = 0; i < ENDPOINTS.size(); i++) {
             Duration left = Duration.between(Instant.now(), deadline);
             if (left.compareTo(MIN_ATTEMPT) < 0) break;
-            // The first server was slow, not refused: the second would most likely be slow too.
-            if (i > 0 && Duration.between(began, Instant.now()).compareTo(FAST_FAILURE) > 0) break;
-            Duration cap = i == 0 ? FIRST_ATTEMPT : SECOND_ATTEMPT;
+            // The first server was slow, not refused: the second would most likely be slow too. A check-in
+            // lookup (no fallback, longer deadline) still tries it, and splits its time between the two.
+            if (i > 0 && tripsCoolDown && Duration.between(began, Instant.now()).compareTo(FAST_FAILURE) > 0) break;
+            Duration cap = !tripsCoolDown ? (i == 0 ? left.dividedBy(2) : left)
+                    : i == 0 ? FIRST_ATTEMPT : SECOND_ATTEMPT;
             attempted = true;
             try {
                 Map<String, Object> res = send(ENDPOINTS.get(i), form, left.compareTo(cap) > 0 ? cap : left);

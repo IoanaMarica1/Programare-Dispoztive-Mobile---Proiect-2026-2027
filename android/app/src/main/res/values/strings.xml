@@ -202,21 +202,21 @@
 
     <!-- Surprise Me -->
     <string name="surprise_title">Surprise me</string>
-    <string name="surprise_subtitle">Got free time? Pick a mood and we\'ll find the best place open right now, within 2 km.</string>
+    <string name="surprise_subtitle">Got free time? Pick a mood and we\'ll find a few places open right now, within 2 km.</string>
     <string name="surprise_entry_title">Surprise me</string>
-    <string name="surprise_entry_body">Free time? Get a place to go right now, within 2 km.</string>
-    <string name="mood_curious">🤔 Curious</string>
-    <string name="mood_relaxed">😌 Relaxed</string>
-    <string name="mood_social">🥂 Social</string>
-    <string name="mood_adventurous">🧗 Adventurous</string>
-    <string name="mood_hungry">🍽️ Hungry</string>
-    <string name="mood_cultural">🎭 Cultural</string>
+    <string name="surprise_entry_body">Free time? Get a few ideas to go to right now, within 2 km.</string>
+    <string name="mood_curious">Curious</string>
+    <string name="mood_relaxed">Relaxed</string>
+    <string name="mood_social">Social</string>
+    <string name="mood_adventurous">Adventurous</string>
+    <string name="mood_hungry">Hungry</string>
+    <string name="mood_cultural">Cultural</string>
     <string name="surprise_loading">Finding something good nearby…</string>
     <string name="surprise_distance_walk">%1$s · %2$d min on foot</string>
     <string name="surprise_photo_description">Photo of %1$s</string>
     <string name="surprise_take_me_there">Take me there</string>
-    <string name="surprise_another">Another one</string>
-    <string name="surprise_no_more">That\'s everything open nearby</string>
+    <string name="surprise_page_counter">%1$d / %2$d</string>
+    <string name="surprise_swipe_hint">Swipe to see more places</string>
     <string name="surprise_check_in">I\'m here, check in</string>
     <string name="surprise_checking_in">Checking in…</string>
     <string name="surprise_checked_in">Checked in</string>

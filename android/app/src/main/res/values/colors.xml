@@ -6,13 +6,11 @@
     <color name="teal_300">#5CC8CF</color>
     <color name="teal_100">#D4F1F2</color>
     <color name="ocean_700">#17598A</color>
-    <color name="ocean_900">#0E3A5C</color>
     <color name="sunset_500">#FF7A45</color>
     <color name="sand_50">#FAF6EF</color>
     <color name="ink_900">#12202A</color>
     <color name="ink_500">#5B6B75</color>
     <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
 
     <color name="background">@color/sand_50</color>
     <color name="surface_card">@color/white</color>

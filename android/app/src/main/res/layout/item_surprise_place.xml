@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One suggested place: a page of the swipeable carousel. Scrolls on its own if the phone is small. -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:paddingTop="@dimen/space_xs"
+    android:paddingBottom="@dimen/space_xs"
+    android:scrollbars="none">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/card_glass"
+        app:cardCornerRadius="@dimen/radius_card"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- The initial shows until the photo is there, and stays if there is none -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="190dp"
+                android:background="@color/avatar_bg">
+
+                <TextView
+                    android:id="@+id/placeInitial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:textColor="@color/avatar_text"
+                    android:textSize="56sp"
+                    android:textStyle="bold" />
+
+                <!-- The description names the place, so the adapter sets it -->
+                <ImageView
+                    android:id="@+id/placePhoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    tools:ignore="ContentDescription" />
+
+                <TextView
+                    android:id="@+id/placeCounter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="@dimen/space_m"
+                    android:background="@drawable/bg_photo_counter"
+                    android:paddingStart="@dimen/space_s"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="@dimen/space_s"
+                    android:paddingBottom="2dp"
+                    android:textColor="@color/text_on_photo"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_l">
+
+                <TextView
+                    android:id="@+id/placeCategory"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_time_pill"
+                    android:paddingStart="@dimen/space_s"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="@dimen/space_s"
+                    android:paddingBottom="2dp"
+                    android:textColor="@color/avatar_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/placeName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_s"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/placeWhy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:lineSpacingExtra="2dp"
+                    android:textAppearance="@style/TextAppearance.Wanderly.Body"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_walk"
+                        app:tint="@color/text_link" />
+
+                    <TextView
+                        android:id="@+id/placeDistance"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_s"
+                        android:layout_weight="1"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/placeOpenRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_schedule"
+                        app:tint="@color/text_link" />
+
+                    <TextView
+                        android:id="@+id/placeOpen"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_s"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Body" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/placeAddressRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_place"
+                        app:tint="@color/text_link" />
+
+                    <TextView
+                        android:id="@+id/placeAddress"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_s"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Wanderly.Body" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/takeMeThereButton"
+                    style="@style/Widget.Wanderly.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_l"
+                    android:text="@string/surprise_take_me_there"
+                    app:icon="@drawable/ic_walk"
+                    app:iconGravity="textStart" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/checkInButton"
+                    style="@style/Widget.Wanderly.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_s"
+                    android:text="@string/surprise_check_in"
+                    app:icon="@drawable/ic_check"
+                    app:iconGravity="textStart" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

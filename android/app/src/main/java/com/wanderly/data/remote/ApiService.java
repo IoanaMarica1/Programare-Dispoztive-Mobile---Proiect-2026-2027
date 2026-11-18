@@ -99,9 +99,9 @@ public interface ApiService {
     @DELETE("api/trips/{tripId}/stops/{stopId}")
     Call<TripResponse> removeStop(@Path("tripId") String tripId, @Path("stopId") String stopId);
 
-    /** The best place within 2 km for a mood, open now. 404: nothing fits; 503: the map is busy. */
+    /** A few places within 2 km for a mood, open now, best first. 404: nothing fits; 503: the map is busy. */
     @POST("api/surprise")
-    Call<SurprisePlaceResponse> surprise(@Body SurpriseRequest request);
+    Call<List<SurprisePlaceResponse>> surprise(@Body SurpriseRequest request);
 
     /** 201 on a first visit (points awarded), 200 when the place was visited before. 422: too far away. */
     @POST("api/surprise/check-in")

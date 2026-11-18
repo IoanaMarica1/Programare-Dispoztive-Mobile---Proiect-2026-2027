@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A dot under the place cards: solid for the card on screen, faded for the others -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/text_on_photo" />
+            <size android:width="8dp" android:height="8dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#80FFFFFF" />
+            <size android:width="8dp" android:height="8dp" />
+        </shape>
+    </item>
+</selector>

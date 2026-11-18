@@ -1,333 +1,228 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Same look as login and the adventure form: the ocean photo with glass cards on top -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?android:colorBackground"
-    android:fillViewport="true"
-    android:fitsSystemWindows="true">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_ocean" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_photo_overlay" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="@dimen/space_l">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
+        android:orientation="vertical">
 
         <!-- Top bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_s"
+            android:paddingTop="@dimen/space_s"
+            android:paddingEnd="@dimen/space_l">
 
             <ImageButton
                 android:id="@+id/backButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="-12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/action_back"
                 android:src="@drawable/ic_arrow_back"
-                app:tint="@color/text_primary" />
+                app:tint="@color/text_on_photo" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:shadowColor="#99000000"
+                android:shadowDy="1"
+                android:shadowRadius="6"
                 android:text="@string/surprise_title"
-                android:textAppearance="@style/TextAppearance.Wanderly.Title" />
+                android:textAppearance="@style/TextAppearance.Wanderly.Title"
+                android:textColor="@color/text_on_photo" />
         </LinearLayout>
 
-        <!-- Mood picker: tapping a mood starts the search right away -->
-        <LinearLayout
-            android:id="@+id/moodPanel"
+        <TextView
+            android:id="@+id/subtitleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_marginStart="@dimen/space_l"
+            android:layout_marginTop="@dimen/space_xs"
+            android:layout_marginEnd="@dimen/space_l"
+            android:shadowColor="#99000000"
+            android:shadowDy="1"
+            android:shadowRadius="6"
+            android:text="@string/surprise_subtitle"
+            android:textAppearance="@style/TextAppearance.Wanderly.Body"
+            android:textColor="@color/text_on_photo_muted" />
 
-            <TextView
-                android:id="@+id/subtitleText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_s"
-                android:text="@string/surprise_subtitle"
-                android:textAppearance="@style/TextAppearance.Wanderly.Body" />
-
-            <GridLayout
-                android:id="@+id/moodGrid"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_m"
-                android:columnCount="2" />
-        </LinearLayout>
-
-        <!-- Looking for a place -->
-        <LinearLayout
-            android:id="@+id/loadingPanel"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_xl"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
-            <ProgressBar
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_m"
-                android:text="@string/surprise_loading"
-                android:textAppearance="@style/TextAppearance.Wanderly.Body" />
-        </LinearLayout>
-
-        <!-- Location permission, location off, nothing found, errors -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/messagePanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_m"
-            android:visibility="gone"
-            app:cardBackgroundColor="@color/surface_card"
-            app:cardCornerRadius="@dimen/radius_card_small"
-            app:cardElevation="0dp"
-            app:contentPadding="@dimen/space_l"
-            app:strokeColor="@color/outline_soft"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
+            <!-- Mood picker: tapping a tile starts the search right away. A message shows above the tiles. -->
+            <ScrollView
+                android:id="@+id/moodPanel"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/messageTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/messageBody"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_xs"
-                    android:textAppearance="@style/TextAppearance.Wanderly.Body" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/messageButton"
-                    style="@style/Widget.Wanderly.Button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_m" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- The suggestion -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/resultPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_m"
-            android:visibility="gone"
-            app:cardBackgroundColor="@color/surface_card"
-            app:cardCornerRadius="@dimen/radius_card_small"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/outline_soft"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <!-- The initial shows until the photo is there, and stays if there is none -->
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:background="@color/avatar_bg">
-
-                    <TextView
-                        android:id="@+id/placeInitial"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:importantForAccessibility="no"
-                        android:textColor="@color/avatar_text"
-                        android:textSize="56sp"
-                        android:textStyle="bold" />
-
-                    <!-- The description names the place, so the activity sets it -->
-                    <ImageView
-                        android:id="@+id/placePhoto"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        tools:ignore="ContentDescription" />
-                </FrameLayout>
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:fillViewport="true"
+                android:paddingStart="@dimen/space_m"
+                android:paddingTop="@dimen/space_m"
+                android:paddingEnd="@dimen/space_m"
+                android:paddingBottom="@dimen/space_l">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_l">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/placeCategory"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_time_pill"
-                        android:paddingStart="@dimen/space_s"
-                        android:paddingTop="2dp"
-                        android:paddingEnd="@dimen/space_s"
-                        android:paddingBottom="2dp"
-                        android:textColor="@color/avatar_text"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/placeName"
+                    <!-- Location permission, location off, nothing found, errors -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/messagePanel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_s"
-                        android:textColor="@color/text_primary"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
+                        android:layout_margin="@dimen/space_xs"
+                        android:layout_marginBottom="@dimen/space_s"
+                        android:visibility="gone"
+                        app:cardBackgroundColor="@color/card_glass"
+                        app:cardCornerRadius="@dimen/radius_card_small"
+                        app:cardElevation="0dp"
+                        app:contentPadding="@dimen/space_l"
+                        app:strokeWidth="0dp">
 
-                    <TextView
-                        android:id="@+id/placeWhy"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_s"
-                        android:lineSpacingExtra="2dp"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_m"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_walk"
-                            app:tint="@color/text_link" />
-
-                        <TextView
-                            android:id="@+id/placeDistance"
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_s"
-                            android:layout_weight="1"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
+                            android:orientation="vertical">
 
-                    <LinearLayout
+                            <TextView
+                                android:id="@+id/messageTitle"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/messageBody"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_xs"
+                                android:textAppearance="@style/TextAppearance.Wanderly.Body" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/messageButton"
+                                style="@style/Widget.Wanderly.Button"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_m" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <GridLayout
+                        android:id="@+id/moodGrid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_schedule"
-                            app:tint="@color/text_link" />
-
-                        <TextView
-                            android:id="@+id/placeOpen"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_s"
-                            android:layout_weight="1"
-                            android:textAppearance="@style/TextAppearance.Wanderly.Body" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/placeAddressRow"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_place"
-                            app:tint="@color/text_link" />
-
-                        <TextView
-                            android:id="@+id/placeAddress"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_s"
-                            android:layout_weight="1"
-                            android:textAppearance="@style/TextAppearance.Wanderly.Body" />
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/takeMeThereButton"
-                        style="@style/Widget.Wanderly.Button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_l"
-                        android:text="@string/surprise_take_me_there"
-                        app:icon="@drawable/ic_walk"
-                        app:iconGravity="textStart" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/anotherButton"
-                        style="@style/Widget.Wanderly.Button.Outlined"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_s"
-                        android:text="@string/surprise_another"
-                        app:icon="@drawable/ic_swap"
-                        app:iconGravity="textStart" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/checkInButton"
-                        style="@style/Widget.Wanderly.Button.Outlined"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_s"
-                        android:text="@string/surprise_check_in"
-                        app:icon="@drawable/ic_check"
-                        app:iconGravity="textStart" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/changeMoodButton"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:minHeight="48dp"
-                        android:text="@string/surprise_change_mood"
-                        android:textColor="@color/text_link" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_s"
-                        android:gravity="center"
-                        android:text="@string/surprise_attribution"
-                        android:textAppearance="@style/TextAppearance.Wanderly.Label" />
+                        android:columnCount="2" />
                 </LinearLayout>
+            </ScrollView>
+
+            <!-- Looking for places -->
+            <LinearLayout
+                android:id="@+id/loadingPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:indeterminateTint="@color/text_on_photo" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:shadowColor="#99000000"
+                    android:shadowDy="1"
+                    android:shadowRadius="6"
+                    android:text="@string/surprise_loading"
+                    android:textColor="@color/text_on_photo"
+                    android:textSize="16sp" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+
+            <!-- The suggestions: swipe sideways, the next card peeks in from the right -->
+            <LinearLayout
+                android:id="@+id/resultPanel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <androidx.viewpager2.widget.ViewPager2
+                    android:id="@+id/placePager"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:paddingStart="@dimen/pager_peek"
+                    android:paddingEnd="@dimen/pager_peek" />
+
+                <TextView
+                    android:id="@+id/swipeHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_s"
+                    android:gravity="center"
+                    android:text="@string/surprise_swipe_hint"
+                    android:textAppearance="@style/TextAppearance.Wanderly.Label"
+                    android:textColor="@color/text_on_photo_muted" />
+
+                <LinearLayout
+                    android:id="@+id/dotsRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:gravity="center"
+                    android:orientation="horizontal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/changeMoodButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:minHeight="48dp"
+                    android:text="@string/surprise_change_mood"
+                    android:textColor="@color/text_on_photo" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:paddingBottom="@dimen/space_m"
+                    android:text="@string/surprise_attribution"
+                    android:textAppearance="@style/TextAppearance.Wanderly.Label"
+                    android:textColor="@color/text_on_photo_muted" />
+            </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
-</ScrollView>
+</FrameLayout>

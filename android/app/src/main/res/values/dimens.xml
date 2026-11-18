@@ -5,7 +5,6 @@
     <dimen name="space_m">16dp</dimen>
     <dimen name="space_l">24dp</dimen>
     <dimen name="space_xl">32dp</dimen>
-    <dimen name="space_xxl">48dp</dimen>
 
     <dimen name="radius_card">28dp</dimen>
     <dimen name="radius_card_small">20dp</dimen>
@@ -13,7 +12,6 @@
     <dimen name="radius_button">16dp</dimen>
 
     <dimen name="button_height">56dp</dimen>
-    <dimen name="avatar_size">48dp</dimen>
     <dimen name="avatar_size_large">88dp</dimen>
     <dimen name="avatar_ring">3dp</dimen>
     <dimen name="list_icon_size">40dp</dimen>
@@ -22,4 +20,8 @@
     <dimen name="hero_height">260dp</dimen>
     <dimen name="plan_hero_height">96dp</dimen>
     <dimen name="stop_number_size">32dp</dimen>
+    <dimen name="mood_tile_height">120dp</dimen>
+    <!-- How much of the next place card shows at the edge of the screen, so it is clear you can swipe -->
+    <dimen name="pager_peek">36dp</dimen>
+    <dimen name="pager_gap">8dp</dimen>
 </resources>
