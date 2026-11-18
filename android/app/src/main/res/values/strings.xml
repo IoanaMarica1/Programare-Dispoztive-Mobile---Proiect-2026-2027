@@ -356,5 +356,4 @@
     </plurals>
     <string name="surprise_check_in_repeat">You have been to %1$s before, so no new points this time.</string>
     <string name="surprise_check_in_done_title">Checked in at %1$s</string>
-    <string name="action_ok">OK</string>
 </resources>
